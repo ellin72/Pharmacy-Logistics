@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin by reading their user document
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if user document exists
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // ==========================================
+    // MEDICINES COLLECTION
+    // ==========================================
+    // Staff & Admin: Read, Create, Update
+    // Admin Only: Delete
+    match /medicines/{medicineId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // TRANSACTIONS COLLECTION
+    // ==========================================
+    // Staff & Admin: Read, Create
+    // Admin Only: Update, Delete
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // ALERTS COLLECTION
+    // ==========================================
+    // Staff & Admin: Read, Create, Update (Resolve)
+    // Admin Only: Delete
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated(); // All users can resolve alerts
+      allow delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // USERS COLLECTION
+    // ==========================================
+    // Staff & Admin: Read (all users)
+    // Staff: Create own document, Update own profile (except role)
+    // Admin: Create any document, Update any profile, Delete any user
+    match /users/{userId} {
+      // All authenticated users can read user documents
+      allow read: if isAuthenticated();
+      
+      // Users can create their own document on first login
+      // Must include required fields: email, role, createdAt
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId &&
+                     request.resource.data.keys().hasAll(['email', 'role', 'createdAt']) &&
+                     request.resource.data.role is string &&
+                     request.resource.data.email is string &&
+                     // Prevent users from creating themselves as admin
+                     request.resource.data.role == 'staff';
+      
+      // Update permissions:
+      // - Users can update their own document (but NOT their role)
+      // - Admins can update any user document (including roles)
+      allow update: if isAuthenticated() && 
+                     (
+                       // User updating their own document (but can't change role)
+                       (request.auth.uid == userId && 
+                        request.resource.data.role == resource.data.role) ||
+                       // Admin updating any document
+                       isAdmin()
+                     );
+      
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
+    }
+  }
+}
+

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order List - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">📋 Auto Order List</h1>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" onclick="exportOrderList()">📥 Export List</button>
+        <button class="btn btn-secondary" onclick="markAllAsOrdered()">✅ Mark All as Ordered</button>
+        <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Medicines Requiring Order</h2>
+        <span id="orderCount" class="badge badge-low-stock">0 items</span>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        This list automatically includes all medicines with stock below their minimum threshold. 
+        Order these items to maintain adequate inventory levels.
+      </p>
+      
+      <div id="orderListContainer">
+        <div class="loading">Loading order list...</div>
+      </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="card" id="orderSummary" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Order Summary</h2>
+      </div>
+      <div id="orderSummaryContent"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let lowStockMedicines = [];
+    let medicinesUnsubscribe = null;
+
+    // Format date
+    function formatDate(date) {
+      if (!date) return 'N/A';
+      return new Date(date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Calculate quantity needed (recommended order quantity)
+    function calculateQuantityNeeded(medicine) {
+      // Order enough to reach 2x the minimum threshold (safety stock)
+      const recommendedStock = medicine.minThreshold * 2;
+      return Math.max(medicine.minThreshold - medicine.quantity, recommendedStock - medicine.quantity);
+    }
+
+    // Render order list
+    function renderOrderList(medicines) {
+      const container = document.getElementById('orderListContainer');
+      const countEl = document.getElementById('orderCount');
+      
+      lowStockMedicines = medicines.filter(med => 
+        med.status === 'low_stock' || med.quantity <= med.minThreshold
+      );
+      
+      countEl.textContent = `${lowStockMedicines.length} item${lowStockMedicines.length !== 1 ? 's' : ''}`;
+
+      if (lowStockMedicines.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <p><strong>Great news!</strong> All medicines are well-stocked. No orders needed at this time.</p>
+            <a href="dashboard.html" class="btn btn-primary" style="margin-top: 1rem;">Back to Dashboard</a>
+          </div>
+        `;
+        document.getElementById('orderSummary').style.display = 'none';
+        return;
+      }
+
+      // Sort by urgency (lowest stock first)
+      lowStockMedicines.sort((a, b) => {
+        const aRatio = a.quantity / a.minThreshold;
+        const bRatio = b.quantity / b.minThreshold;
+        return aRatio - bRatio;
+      });
+
+      container.innerHTML = `
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Medicine Name</th>
+              <th>Batch Number</th>
+              <th>Current Stock</th>
+              <th>Min Threshold</th>
+              <th>Shortage</th>
+              <th>Recommended Order</th>
+              <th>Priority</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lowStockMedicines.map(med => {
+              const shortage = med.minThreshold - med.quantity;
+              const recommendedOrder = calculateQuantityNeeded(med);
+              const stockRatio = med.quantity / med.minThreshold;
+              
+              // Priority: Critical (< 25%), High (< 50%), Medium (< 75%)
+              let priority = 'Medium';
+              let priorityClass = 'badge-low-stock';
+              if (stockRatio < 0.25) {
+                priority = 'Critical';
+                priorityClass = 'badge-expired';
+              } else if (stockRatio < 0.5) {
+                priority = 'High';
+                priorityClass = 'badge-expiring-soon';
+              }
+
+              return `
+                <tr>
+                  <td><strong>${escapeHtml(med.name)}</strong></td>
+                  <td>${escapeHtml(med.batch)}</td>
+                  <td><span style="color: ${med.quantity === 0 ? 'var(--danger-color)' : 'var(--warning-color)'}; font-weight: bold;">${med.quantity}</span></td>
+                  <td>${med.minThreshold}</td>
+                  <td><span style="color: var(--danger-color); font-weight: bold;">-${shortage}</span></td>
+                  <td><strong>${recommendedOrder}</strong> units</td>
+                  <td><span class="badge ${priorityClass}">${priority}</span></td>
+                  <td>
+                    <button onclick="markAsOrdered('${med.id}', '${escapeHtml(med.name)}')" class="btn btn-sm btn-success">Mark as Ordered</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+
+      // Update order summary
+      updateOrderSummary();
+    }
+
+    // Update order summary
+    function updateOrderSummary() {
+      const summaryContainer = document.getElementById('orderSummaryContent');
+      const summaryCard = document.getElementById('orderSummary');
+      
+      if (lowStockMedicines.length === 0) {
+        summaryCard.style.display = 'none';
+        return;
+      }
+
+      summaryCard.style.display = 'block';
+
+      const totalItems = lowStockMedicines.length;
+      const criticalItems = lowStockMedicines.filter(m => (m.quantity / m.minThreshold) < 0.25).length;
+      const highPriorityItems = lowStockMedicines.filter(m => {
+        const ratio = m.quantity / m.minThreshold;
+        return ratio >= 0.25 && ratio < 0.5;
+      }).length;
+      const totalOrderQuantity = lowStockMedicines.reduce((sum, med) => 
+        sum + calculateQuantityNeeded(med), 0
+      );
+
+      summaryContainer.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Items</strong>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${totalItems}</div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem;">Critical Priority</strong>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--danger-color);">${criticalItems}</div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem;">High Priority</strong>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);">${highPriorityItems}</div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Units Needed</strong>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--text-primary);">${totalOrderQuantity}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Mark medicine as ordered
+    async function markAsOrdered(medicineId, medicineName) {
+      const confirmMark = confirm(`Mark "${medicineName}" as ordered?\n\nThis will add a note to the medicine record.`);
+      
+      if (!confirmMark) {
+        return;
+      }
+
+      try {
+        const medicine = await getMedicineById(medicineId);
+        if (!medicine) {
+          alert('Medicine not found');
+          return;
+        }
+
+        // Add order note to medicine
+        const currentNotes = medicine.notes || '';
+        const orderNote = `\n[Ordered on ${new Date().toLocaleDateString()}]`;
+        const updatedNotes = currentNotes + orderNote;
+
+        await db.collection('medicines').doc(medicineId).update({
+          notes: updatedNotes.trim(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert(`"${medicineName}" marked as ordered.`);
+        // List will update automatically via real-time listener
+      } catch (error) {
+        console.error('Error marking as ordered:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Mark all as ordered
+    async function markAllAsOrdered() {
+      if (lowStockMedicines.length === 0) {
+        alert('No items to mark as ordered.');
+        return;
+      }
+
+      const confirmMark = confirm(
+        `Mark all ${lowStockMedicines.length} items as ordered?\n\n` +
+        `This will add order notes to all medicines in the list.`
+      );
+
+      if (!confirmMark) {
+        return;
+      }
+
+      const orderDate = new Date().toLocaleDateString();
+      const batch = db.batch();
+      let updateCount = 0;
+
+      try {
+        for (const med of lowStockMedicines) {
+          const medicine = await getMedicineById(med.id);
+          if (medicine) {
+            const currentNotes = medicine.notes || '';
+            const orderNote = `\n[Ordered on ${orderDate}]`;
+            const updatedNotes = currentNotes + orderNote;
+
+            const medRef = db.collection('medicines').doc(med.id);
+            batch.update(medRef, {
+              notes: updatedNotes.trim(),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            updateCount++;
+          }
+        }
+
+        await batch.commit();
+        alert(`Successfully marked ${updateCount} item${updateCount !== 1 ? 's' : ''} as ordered.`);
+        // List will update automatically via real-time listener
+      } catch (error) {
+        console.error('Error marking all as ordered:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Export order list
+    function exportOrderList() {
+      if (lowStockMedicines.length === 0) {
+        alert('No items to export.');
+        return;
+      }
+
+      // Create CSV content
+      let csv = 'Medicine Name,Batch Number,Current Stock,Min Threshold,Shortage,Recommended Order,Priority\n';
+      
+      lowStockMedicines.forEach(med => {
+        const shortage = med.minThreshold - med.quantity;
+        const recommendedOrder = calculateQuantityNeeded(med);
+        const stockRatio = med.quantity / med.minThreshold;
+        
+        let priority = 'Medium';
+        if (stockRatio < 0.25) {
+          priority = 'Critical';
+        } else if (stockRatio < 0.5) {
+          priority = 'High';
+        }
+
+        csv += `"${med.name}","${med.batch}",${med.quantity},${med.minThreshold},${shortage},${recommendedOrder},"${priority}"\n`;
+      });
+
+      // Create and download file
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `order-list-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Initialize page
+    async function initPage() {
+      // Wait for auth state to be determined
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Get user role and display
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+
+      // Subscribe to medicines (real-time updates)
+      medicinesUnsubscribe = subscribeToMedicines((medicines) => {
+        renderOrderList(medicines);
+      });
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (medicinesUnsubscribe) medicinesUnsubscribe();
+    });
+
+    // Initialize when page loads
+    initPage();
+  </script>
+</body>
+</html>
+

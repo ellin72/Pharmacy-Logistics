@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adjust Stock - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">Adjust Stock</h1>
+      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <div id="loadingState" class="card">
+      <div class="loading">Loading medicine information...</div>
+    </div>
+
+    <div id="medicineInfo" class="card hidden">
+      <div class="card-header">
+        <h2 class="card-title" id="medicineName"></h2>
+        <span class="badge" id="medicineStatus"></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Batch Number</strong>
+          <div id="medicineBatch"></div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Current Quantity</strong>
+          <div style="font-size: 1.5rem; font-weight: bold;" id="currentQuantity"></div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Min Threshold</strong>
+          <div id="minThreshold"></div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Expiry Date</strong>
+          <div id="expiryDate"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="adjustForm" class="card hidden">
+      <form id="stockAdjustForm">
+        <div class="form-group">
+          <label class="form-label">Transaction Type *</label>
+          <select id="transactionType" class="form-select" required>
+            <option value="">Select type...</option>
+            <option value="add">Add Stock (Increase)</option>
+            <option value="remove">Remove Stock (Decrease)</option>
+            <option value="adjust">Adjust to Specific Quantity</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quantity" class="form-label" id="quantityLabel">Quantity *</label>
+          <input type="number" id="quantity" class="form-input" required min="0" step="1" placeholder="0">
+          <small id="quantityHint" style="color: var(--text-secondary); font-size: 0.75rem;"></small>
+          <div class="form-error hidden" id="quantityError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="reason" class="form-label">Reason (Optional)</label>
+          <textarea id="reason" class="form-textarea" placeholder="e.g., Restocked, Dispensed to patient, Inventory correction..."></textarea>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  
+  <script>
+    let currentMedicine = null;
+
+    // Get medicine ID from URL
+    function getMedicineId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    // Format date
+    function formatDate(date) {
+      if (!date) return 'N/A';
+      return new Date(date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    // Get status badge
+    function getStatusBadge(status) {
+      const badges = {
+        'in_stock': 'badge-in-stock',
+        'low_stock': 'badge-low-stock',
+        'expiring_soon': 'badge-expiring-soon',
+        'expired': 'badge-expired'
+      };
+      return badges[status] || '';
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        'in_stock': 'In Stock',
+        'low_stock': 'Low Stock',
+        'expiring_soon': 'Expiring Soon',
+        'expired': 'Expired'
+      };
+      return labels[status] || status;
+    }
+
+    // Load medicine data
+    async function loadMedicine() {
+      const medicineId = getMedicineId();
+      if (!medicineId) {
+        showMessage('No medicine ID provided', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        return;
+      }
+
+      const medicine = await getMedicineById(medicineId);
+      if (!medicine) {
+        showMessage('Medicine not found', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        return;
+      }
+
+      currentMedicine = medicine;
+      renderMedicineInfo();
+    }
+
+    // Render medicine info
+    function renderMedicineInfo() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('medicineInfo').classList.remove('hidden');
+      document.getElementById('adjustForm').classList.remove('hidden');
+
+      document.getElementById('medicineName').textContent = currentMedicine.name;
+      document.getElementById('medicineBatch').textContent = currentMedicine.batch;
+      document.getElementById('currentQuantity').textContent = currentMedicine.quantity;
+      document.getElementById('minThreshold').textContent = currentMedicine.minThreshold;
+      document.getElementById('expiryDate').textContent = formatDate(currentMedicine.expiryDate);
+      
+      const statusEl = document.getElementById('medicineStatus');
+      statusEl.textContent = getStatusLabel(currentMedicine.status);
+      statusEl.className = 'badge ' + getStatusBadge(currentMedicine.status);
+    }
+
+    // Update form based on transaction type
+    document.getElementById('transactionType').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const quantityInput = document.getElementById('quantity');
+      const label = document.getElementById('quantityLabel');
+      const hint = document.getElementById('quantityHint');
+
+      switch (type) {
+        case 'add':
+          label.textContent = 'Quantity to Add *';
+          hint.textContent = `Current: ${currentMedicine.quantity} → New: ${currentMedicine.quantity} + your input`;
+          quantityInput.setAttribute('min', '1');
+          break;
+        case 'remove':
+          label.textContent = 'Quantity to Remove *';
+          hint.textContent = `Current: ${currentMedicine.quantity} → New: ${currentMedicine.quantity} - your input (min: 0)`;
+          quantityInput.setAttribute('min', '1');
+          quantityInput.setAttribute('max', currentMedicine.quantity);
+          break;
+        case 'adjust':
+          label.textContent = 'New Total Quantity *';
+          hint.textContent = `Current: ${currentMedicine.quantity} → Setting to your input`;
+          quantityInput.setAttribute('min', '0');
+          quantityInput.removeAttribute('max');
+          break;
+        default:
+          label.textContent = 'Quantity *';
+          hint.textContent = '';
+      }
+    });
+
+    // Show message
+    function showMessage(message, type = 'info') {
+      const container = document.getElementById('messageContainer');
+      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    // Show error
+    function showError(message) {
+      const errorEl = document.getElementById('quantityError');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    // Form submission
+    document.getElementById('stockAdjustForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const transactionType = document.getElementById('transactionType').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const reason = document.getElementById('reason').value.trim();
+
+      if (!transactionType) {
+        showMessage('Please select a transaction type', 'error');
+        return;
+      }
+
+      if (isNaN(quantity) || quantity <= 0) {
+        showError('Please enter a valid quantity');
+        return;
+      }
+
+      if (transactionType === 'remove' && quantity > currentMedicine.quantity) {
+        showError(`Cannot remove more than current quantity (${currentMedicine.quantity})`);
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      let result;
+      if (transactionType === 'adjust') {
+        result = await updateStock(currentMedicine.id, transactionType, quantity, reason);
+      } else {
+        result = await updateStock(currentMedicine.id, transactionType, quantity, reason);
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
+
+      if (result.success) {
+        showMessage('Stock updated successfully! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1500);
+      } else {
+        showMessage('Error: ' + result.error, 'error');
+      }
+    });
+
+    // Initialize page
+    async function initPage() {
+      // Wait for auth state to be determined
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      document.getElementById('userEmail').textContent = user.email;
+      loadMedicine();
+    }
+
+    initPage();
+  </script>
+</body>
+</html>
+

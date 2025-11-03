@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">Inventory Dashboard</h1>
+      <div class="flex gap-2">
+        <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">📋 Order List</a>
+        <a href="add-medicine.html" class="btn btn-primary">+ Add Medicine</a>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">
+          📋 View Order List (<span id="lowStockCount">0</span> items)
+        </a>
+        <span style="color: var(--text-secondary); font-size: 0.875rem;">
+          Medicines below minimum threshold
+        </span>
+      </div>
+    </div>
+
+    <!-- Alerts Panel -->
+    <div class="card alerts-panel">
+      <div class="card-header">
+        <h2 class="card-title">⚠️ Alerts</h2>
+        <span id="alertCount" class="badge">0 alerts</span>
+      </div>
+      <div id="alertsContainer">
+        <div class="loading">Loading alerts...</div>
+      </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card">
+      <div class="filters" id="filtersContainer">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="expired">Expired</button>
+        <button class="filter-btn" data-filter="expiring_soon">Expiring Soon</button>
+        <button class="filter-btn" data-filter="low_stock">Low Stock</button>
+        <button class="filter-btn" data-filter="in_stock">In Stock</button>
+      </div>
+      
+      <div class="search-box">
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name or batch number..." autocomplete="off">
+          <button id="clearSearchBtn" class="btn btn-sm btn-secondary" onclick="clearSearch()" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.5rem;">✕ Clear</button>
+        </div>
+        <div id="searchResultsInfo" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Medicines Inventory</h2>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Batch Number</th>
+              <th>Quantity</th>
+              <th>Min Threshold</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody">
+            <tr>
+              <td colspan="7" class="text-center">
+                <div class="loading">Loading inventory...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let currentFilter = 'all';
+    let allMedicines = [];
+    let filteredMedicines = [];
+    let medicinesUnsubscribe = null;
+    let alertsUnsubscribe = null;
+
+    // Format date for display
+    function formatDate(date) {
+      if (!date) return 'N/A';
+      return new Date(date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    // Get status badge class
+    function getStatusBadge(status) {
+      const badges = {
+        'in_stock': 'badge-in-stock',
+        'low_stock': 'badge-low-stock',
+        'expiring_soon': 'badge-expiring-soon',
+        'expired': 'badge-expired'
+      };
+      return badges[status] || '';
+    }
+
+    // Get status label
+    function getStatusLabel(status) {
+      const labels = {
+        'in_stock': 'In Stock',
+        'low_stock': 'Low Stock',
+        'expiring_soon': 'Expiring Soon',
+        'expired': 'Expired'
+      };
+      return labels[status] || status;
+    }
+
+    // Render inventory table
+    function renderInventory(medicines) {
+      const tbody = document.getElementById('inventoryTableBody');
+      
+      if (medicines.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center">
+              <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <p>No medicines found. <a href="add-medicine.html">Add your first medicine</a></p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const isAdmin = window.currentUserRole === 'admin';
+      const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+      
+      // Highlight matching text if searching
+      const highlightMatch = (text, term) => {
+        if (!term) return escapeHtml(text);
+        const escaped = escapeHtml(text);
+        const regex = new RegExp(`(${escapeHtml(term)})`, 'gi');
+        return escaped.replace(regex, '<mark style="background: #fef3c7; padding: 2px 4px; border-radius: 3px;">$1</mark>');
+      };
+      
+      tbody.innerHTML = medicines.map(med => {
+        const deleteBtn = isAdmin ? 
+          `<button onclick="handleDeleteMedicine('${med.id}', '${escapeHtml(med.name)}')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;">Delete</button>` : 
+          '';
+        
+        return `
+        <tr>
+          <td><strong>${highlightMatch(med.name, searchTerm)}</strong></td>
+          <td>${highlightMatch(med.batch, searchTerm)}</td>
+          <td>${med.quantity}</td>
+          <td>${med.minThreshold}</td>
+          <td>${formatDate(med.expiryDate)}</td>
+          <td><span class="badge ${getStatusBadge(med.status)}">${getStatusLabel(med.status)}</span></td>
+          <td>
+            <a href="adjust-stock.html?id=${med.id}" class="btn btn-sm btn-secondary">Adjust Stock</a>
+            ${deleteBtn}
+          </td>
+        </tr>
+      `;
+      }).join('');
+    }
+
+    // Filter medicines
+    function filterMedicines() {
+      let filtered = [...allMedicines];
+      const searchInput = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const resultsInfo = document.getElementById('searchResultsInfo');
+      const searchTerm = searchInput.value.trim().toLowerCase();
+
+      // Show/hide clear button
+      if (searchTerm) {
+        clearBtn.style.display = 'inline-block';
+      } else {
+        clearBtn.style.display = 'none';
+        resultsInfo.style.display = 'none';
+      }
+
+      // Apply status filter
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(med => med.status === currentFilter);
+      }
+
+      // Apply search filter
+      if (searchTerm) {
+        const beforeSearch = filtered.length;
+        filtered = filtered.filter(med => 
+          med.name.toLowerCase().includes(searchTerm) || 
+          med.batch.toLowerCase().includes(searchTerm)
+        );
+        
+        // Show search results info
+        if (filtered.length === 0) {
+          resultsInfo.style.display = 'block';
+          const searchValue = escapeHtml(searchInput.value);
+          resultsInfo.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <span style="color: var(--warning-color);">No results found for "${searchValue}"</span>
+              <a href="add-medicine.html?search=${encodeURIComponent(searchInput.value)}" class="btn btn-sm btn-primary">
+                ➕ Add "${searchValue}" as New Medicine
+              </a>
+            </div>
+          `;
+        } else if (beforeSearch > filtered.length) {
+          resultsInfo.style.display = 'block';
+          resultsInfo.innerHTML = `Showing <strong>${filtered.length}</strong> of <strong>${beforeSearch}</strong> items`;
+        } else {
+          resultsInfo.style.display = 'block';
+          resultsInfo.innerHTML = `Found <strong>${filtered.length}</strong> item${filtered.length !== 1 ? 's' : ''}`;
+        }
+      }
+
+      filteredMedicines = filtered;
+      renderInventory(filtered);
+    }
+
+    // Clear search
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').style.display = 'none';
+      document.getElementById('searchResultsInfo').style.display = 'none';
+      filterMedicines();
+      document.getElementById('searchInput').focus();
+    }
+
+    // Render alerts
+    function renderAlerts(alerts) {
+      const container = document.getElementById('alertsContainer');
+      const countEl = document.getElementById('alertCount');
+      
+      countEl.textContent = `${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
+
+      if (alerts.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No active alerts. All medicines are in good condition! ✅</p></div>';
+        return;
+      }
+
+      container.innerHTML = alerts.map(alert => {
+        const alertClass = alert.type === 'expired' ? 'expired' : 
+                          alert.type === 'expiry_soon' ? 'expiry-soon' : 'low-stock';
+        const icon = alert.type === 'expired' ? '🚨' : 
+                    alert.type === 'expiry_soon' ? '⚠️' : '📉';
+        const message = alert.type === 'expired' ? 'This medicine has expired' :
+                       alert.type === 'expiry_soon' ? `Expires on ${formatDate(alert.dueOn)}` :
+                       'Stock is below minimum threshold';
+
+        return `
+          <div class="alert-item ${alertClass}">
+            <div class="alert-content">
+              <div class="alert-title">${icon} ${escapeHtml(alert.medicineName)}</div>
+              <div class="alert-description">${message}</div>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="resolveAlertClick('${alert.id}')">Resolve</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Resolve alert
+    async function resolveAlertClick(alertId) {
+      const result = await resolveAlert(alertId);
+      if (result.success) {
+        // Alert will be removed automatically via real-time listener
+      } else {
+        alert('Failed to resolve alert: ' + result.error);
+      }
+    }
+
+    // Handle delete medicine (admin only)
+    async function handleDeleteMedicine(medicineId, medicineName) {
+      const isAdmin = window.currentUserRole === 'admin';
+      
+      if (!isAdmin) {
+        alert('You do not have permission to delete medicines. Only admins can delete.');
+        return;
+      }
+
+      const confirmDelete = confirm(`Are you sure you want to delete "${medicineName}"?\n\nThis action cannot be undone.`);
+      
+      if (!confirmDelete) {
+        return;
+      }
+
+      const result = await deleteMedicine(medicineId);
+      
+      if (result.success) {
+        alert('Medicine deleted successfully.');
+        // Table will update automatically via real-time listener
+      } else {
+        alert('Error: ' + result.error);
+      }
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize dashboard
+    async function initDashboard() {
+      // Wait for auth state to be determined
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Get user role and display
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+      
+      // Store role for use in UI
+      window.currentUserRole = userRole;
+
+      // Set up filter buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          filterMedicines();
+        });
+      });
+
+      // Set up search with debouncing for better performance
+      let searchTimeout;
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          filterMedicines();
+        }, 150); // Wait 150ms after user stops typing
+      });
+      
+      // Also trigger immediately on Enter key
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          clearTimeout(searchTimeout);
+          filterMedicines();
+        }
+        // Clear search with Escape key
+        if (e.key === 'Escape') {
+          clearSearch();
+        }
+      });
+      
+      // Focus search input when Ctrl+F or Cmd+F is pressed
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          e.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+      });
+
+      // Subscribe to medicines (real-time updates)
+      medicinesUnsubscribe = subscribeToMedicines((medicines) => {
+        allMedicines = medicines;
+        filterMedicines();
+        
+        // Update low stock count
+        const lowStockCount = medicines.filter(m => 
+          m.status === 'low_stock' || m.quantity <= m.minThreshold
+        ).length;
+        const lowStockCountEl = document.getElementById('lowStockCount');
+        if (lowStockCountEl) {
+          lowStockCountEl.textContent = lowStockCount;
+        }
+      });
+
+      // Subscribe to alerts (real-time updates)
+      alertsUnsubscribe = subscribeToAlerts((alerts) => {
+        renderAlerts(alerts);
+      });
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (medicinesUnsubscribe) medicinesUnsubscribe();
+      if (alertsUnsubscribe) alertsUnsubscribe();
+    });
+
+    // Initialize when page loads
+    initDashboard();
+  </script>
+</body>
+</html>
+

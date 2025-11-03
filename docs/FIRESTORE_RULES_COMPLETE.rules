@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin by reading their user document
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper: check if user document exists
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Medicines collection
+    match /medicines/{medicineId} {
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+      
+      // All authenticated users can create
+      allow create: if isAuthenticated();
+      
+      // All authenticated users can update
+      allow update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+    
+    // Transactions collection
+    match /transactions/{transactionId} {
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+      
+      // All authenticated users can create
+      allow create: if isAuthenticated();
+      
+      // Only admins can update or delete
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Alerts collection
+    match /alerts/{alertId} {
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+      
+      // System can create alerts (authenticated users)
+      allow create: if isAuthenticated();
+      
+      // All authenticated users can update (to resolve alerts)
+      allow update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document or any user if authenticated
+      allow read: if isAuthenticated();
+      
+      // Users can create their own document on first login
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId &&
+                     request.resource.data.keys().hasAll(['email', 'role', 'createdAt']) &&
+                     request.resource.data.role is string &&
+                     request.resource.data.email is string;
+      
+      // Users can update their own document, admins can update any
+      // Prevent users from changing their own role
+      allow update: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin()) &&
+                     (request.auth.uid == userId && 
+                      request.resource.data.role == resource.data.role || 
+                      isAdmin());
+      
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
+    }
+  }
+}
+

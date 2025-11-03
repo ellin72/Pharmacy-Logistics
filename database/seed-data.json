@@ -1,0 +1,34 @@
+{
+  "description": "Sample data for testing the Pharmacy Logistics System",
+  "note": "This is example data. Use Firebase Console to import, or create manually through the UI.",
+  "medicines": [
+    {
+      "name": "Paracetamol 500mg",
+      "batch": "BATCH-2024-001",
+      "expiryDate": "2025-12-31",
+      "quantity": 150,
+      "minThreshold": 50,
+      "status": "in_stock",
+      "notes": "Pain reliever and fever reducer"
+    },
+    {
+      "name": "Amoxicillin 250mg",
+      "batch": "BATCH-2024-002",
+      "expiryDate": "2024-03-15",
+      "quantity": 25,
+      "minThreshold": 30,
+      "status": "low_stock",
+      "notes": "Antibiotic - expiring soon, use priority"
+    },
+    {
+      "name": "Ibuprofen 400mg",
+      "batch": "BATCH-2024-003",
+      "expiryDate": "2025-06-30",
+      "quantity": 200,
+      "minThreshold": 75,
+      "status": "in_stock",
+      "notes": "Anti-inflammatory medication"
+    }
+  ]
+}
+
