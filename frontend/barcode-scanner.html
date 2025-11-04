@@ -101,7 +101,10 @@
           <div id="scanResult" class="scan-result" style="display: none;">
             <h3>Scan Result:</h3>
             <div id="scanResultContent"></div>
-            <button onclick="handleScanResult()" class="btn btn-primary" style="margin-top: 1rem;">View Medicine</button>
+            <div id="scanActions" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button onclick="showMedicineActions()" class="btn btn-primary">⚡ Actions</button>
+              <button onclick="handleScanResult()" class="btn btn-secondary">📊 View Details</button>
+            </div>
           </div>
         </div>
 
@@ -401,22 +404,41 @@
       
       // Display result
       if (scannedData && scannedData.type === 'medicine' && scannedData.id) {
-        // Medicine found
-        document.getElementById('scanResultContent').innerHTML = `
-          <p><strong>Medicine:</strong> ${escapeHtml(scannedData.name || 'Unknown')}</p>
-          <p><strong>Batch:</strong> ${escapeHtml(scannedData.batch || 'N/A')}</p>
-          <p><strong>ID:</strong> ${scannedData.id}</p>
-        `;
-        document.getElementById('scanResult').style.display = 'block';
-        showMessage('✅ Scan successful! Medicine found.', 'success');
+        // Find medicine in inventory to get full details
+        const medicine = allMedicines.find(m => m.id === scannedData.id);
         
-        // Auto-navigate after 2 seconds
-        setTimeout(() => {
-          window.scanProcessing = false;
-          if (scannedData && scannedData.id) {
-            handleScanResult();
-          }
-        }, 2000);
+        if (medicine) {
+          // Medicine found - show detailed info with actions
+          document.getElementById('scanResultContent').innerHTML = `
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+              <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+              <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
+              <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
+              <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
+              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+            </div>
+          `;
+          document.getElementById('scanResult').style.display = 'block';
+          document.getElementById('scanActions').style.display = 'flex';
+          showMessage('✅ Scan successful! Medicine found. Click Actions to manage.', 'success');
+          
+          // Auto-show action modal after 1 second
+          setTimeout(() => {
+            showMedicineActions();
+          }, 1000);
+        } else {
+          // Medicine ID found but not in current inventory
+          document.getElementById('scanResultContent').innerHTML = `
+            <p><strong>Medicine ID:</strong> ${scannedData.id}</p>
+            <p><strong>Name:</strong> ${escapeHtml(scannedData.name || 'Unknown')}</p>
+            <p style="color: var(--warning-color);">⚠️ Medicine not found in current inventory.</p>
+          `;
+          document.getElementById('scanResult').style.display = 'block';
+          showMessage('⚠️ Medicine ID found but not in inventory', 'warning');
+        }
+        
+        window.scanProcessing = false;
       } else if (scannedData && scannedData.type === 'barcode') {
         // Try to find medicine by batch number or code
         const medicine = allMedicines.find(m => 
@@ -432,17 +454,21 @@
             batch: medicine.batch, 
             type: 'medicine' 
           };
+          // Show detailed medicine info
           document.getElementById('scanResultContent').innerHTML = `
-            <p><strong>Medicine:</strong> ${escapeHtml(medicine.name)}</p>
-            <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
-            <p><strong>ID:</strong> ${medicine.id}</p>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+              <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+              <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
+              <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
+              <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
+              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+            </div>
           `;
           document.getElementById('scanResult').style.display = 'block';
-          showMessage('✅ Scan successful! Medicine found.', 'success');
-          setTimeout(() => {
-            window.scanProcessing = false;
-            handleScanResult();
-          }, 2000);
+          document.getElementById('scanActions').style.display = 'flex';
+          showMessage('✅ Scan successful! Medicine found. Click Actions to manage.', 'success');
+          window.scanProcessing = false;
         } else {
           window.scanProcessing = false;
           showMessage('⚠️ Barcode not found in inventory. Code: ' + scannedData.code, 'warning');
@@ -463,10 +489,253 @@
       }
     }
 
-    // Handle scan result button
+    // Handle scan result button - navigate to dashboard
     function handleScanResult() {
       if (scannedData && scannedData.id) {
         window.location.href = `dashboard.html?highlight=${scannedData.id}`;
+      }
+    }
+
+    // Show medicine actions modal
+    async function showMedicineActions() {
+      if (!scannedData || !scannedData.id) {
+        showMessage('No medicine selected. Please scan a medicine first.', 'error');
+        return;
+      }
+
+      // Get full medicine details
+      const medicine = allMedicines.find(m => m.id === scannedData.id);
+      if (!medicine) {
+        showMessage('Medicine not found. Please try scanning again.', 'error');
+        return;
+      }
+
+      // Show action modal
+      showActionModal(medicine);
+    }
+
+    // Show action modal for medicine
+    function showActionModal(medicine) {
+      const userRole = window.currentUserRole || 'staff';
+      const isAdmin = userRole === 'admin';
+
+      const modal = document.createElement('div');
+      modal.id = 'medicineActionModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        animation: fadeIn 0.2s ease-out;
+      `;
+
+      modal.innerHTML = `
+        <div style="
+          background: white;
+          border-radius: 0.5rem;
+          padding: 2rem;
+          max-width: 500px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        ">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0;">Medicine Actions</h2>
+            <button onclick="closeActionModal()" style="
+              background: transparent;
+              border: none;
+              font-size: 1.5rem;
+              cursor: pointer;
+              color: var(--text-secondary);
+            ">×</button>
+          </div>
+
+          <!-- Medicine Info -->
+          <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 0.5rem 0;">${escapeHtml(medicine.name)}</h3>
+            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Current Stock:</strong> <span style="font-size: 1.25rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span></p>
+            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
+            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
+            <p style="margin: 0.25rem 0;"><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="display: grid; gap: 0.75rem;">
+            <button onclick="quickAddStock('${medicine.id}')" class="btn btn-success" style="width: 100%;">
+              ➕ Add Stock
+            </button>
+            <button onclick="quickRemoveStock('${medicine.id}')" class="btn btn-secondary" style="width: 100%;">
+              ➖ Remove Stock
+            </button>
+            <button onclick="quickAdjustStock('${medicine.id}')" class="btn btn-primary" style="width: 100%;">
+              🔄 Adjust Stock
+            </button>
+            <a href="adjust-stock.html?medicineId=${medicine.id}" class="btn btn-secondary" style="width: 100%; text-align: center; text-decoration: none; display: block;">
+              📝 Full Stock Adjustment
+            </a>
+            ${isAdmin ? `
+            <button onclick="quickDeleteMedicine('${medicine.id}', '${escapeHtml(medicine.name)}')" class="btn" style="width: 100%; background: var(--danger-color); color: white;">
+              🗑️ Delete Medicine
+            </button>
+            ` : ''}
+            <button onclick="viewMedicineDetails('${medicine.id}')" class="btn btn-secondary" style="width: 100%;">
+              📊 View Full Details
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Add fade-in animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `;
+      if (!document.getElementById('modalStyles')) {
+        style.id = 'modalStyles';
+        document.head.appendChild(style);
+      }
+    }
+
+    // Close action modal
+    window.closeActionModal = function() {
+      const modal = document.getElementById('medicineActionModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
+
+    // Quick add stock
+    async function quickAddStock(medicineId) {
+      closeActionModal();
+      
+      const quantity = prompt('Enter quantity to add:');
+      if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+        return;
+      }
+
+      const reason = prompt('Reason (optional):') || 'Stock added via scanner';
+
+      const result = await updateStock(medicineId, 'add', parseInt(quantity), reason);
+      
+      if (result.success) {
+        showMessage(`✅ Added ${quantity} units. New stock: ${result.newQuantity}`, 'success');
+        // Reload medicines to get updated data
+        await loadMedicines();
+        // Update scan result display
+        updateScanResultDisplay();
+        // Re-open action modal with updated data
+        setTimeout(() => showMedicineActions(), 500);
+      } else {
+        showMessage('❌ Error: ' + result.error, 'error');
+      }
+    }
+
+    // Quick remove stock
+    async function quickRemoveStock(medicineId) {
+      closeActionModal();
+      
+      const quantity = prompt('Enter quantity to remove:');
+      if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+        return;
+      }
+
+      const reason = prompt('Reason (optional):') || 'Stock removed via scanner';
+
+      const result = await updateStock(medicineId, 'remove', parseInt(quantity), reason);
+      
+      if (result.success) {
+        showMessage(`✅ Removed ${quantity} units. New stock: ${result.newQuantity}`, 'success');
+        await loadMedicines();
+        updateScanResultDisplay();
+        setTimeout(() => showMedicineActions(), 500);
+      } else {
+        showMessage('❌ Error: ' + result.error, 'error');
+      }
+    }
+
+    // Quick adjust stock
+    async function quickAdjustStock(medicineId) {
+      closeActionModal();
+      
+      const medicine = allMedicines.find(m => m.id === medicineId);
+      const currentStock = medicine ? medicine.quantity : 0;
+      
+      const quantity = prompt(`Enter new stock quantity (current: ${currentStock}):`);
+      if (!quantity || isNaN(quantity) || parseInt(quantity) < 0) {
+        return;
+      }
+
+      const reason = prompt('Reason (optional):') || 'Stock adjusted via scanner';
+
+      const result = await updateStock(medicineId, 'adjust', parseInt(quantity), reason);
+      
+      if (result.success) {
+        showMessage(`✅ Stock adjusted to ${result.newQuantity}`, 'success');
+        await loadMedicines();
+        updateScanResultDisplay();
+        setTimeout(() => showMedicineActions(), 500);
+      } else {
+        showMessage('❌ Error: ' + result.error, 'error');
+      }
+    }
+
+    // Quick delete medicine (admin only)
+    async function quickDeleteMedicine(medicineId, medicineName) {
+      const confirmDelete = confirm(`Are you sure you want to delete "${medicineName}"?\n\nThis action cannot be undone.`);
+      
+      if (!confirmDelete) {
+        return;
+      }
+
+      const result = await deleteMedicine(medicineId);
+      
+      if (result.success) {
+        showMessage('✅ Medicine deleted successfully', 'success');
+        closeActionModal();
+        // Clear scanned data
+        scannedData = null;
+        document.getElementById('scanResult').style.display = 'none';
+        await loadMedicines();
+      } else {
+        showMessage('❌ Error: ' + result.error, 'error');
+      }
+    }
+
+    // View medicine details
+    function viewMedicineDetails(medicineId) {
+      window.location.href = `dashboard.html?highlight=${medicineId}`;
+    }
+
+    // Update scan result display with latest medicine data
+    function updateScanResultDisplay() {
+      if (!scannedData || !scannedData.id) return;
+      
+      const medicine = allMedicines.find(m => m.id === scannedData.id);
+      if (medicine) {
+        document.getElementById('scanResultContent').innerHTML = `
+          <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+            <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+            <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+            <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
+            <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
+            <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
+            <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+          </div>
+        `;
       }
     }
 
