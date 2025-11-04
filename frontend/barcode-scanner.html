@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcode Scanner - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .scanner-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    #scannerVideo {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .scanner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 200px;
+      border: 2px solid #fff;
+      border-radius: 0.5rem;
+      pointer-events: none;
+    }
+    .scanner-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .scan-result {
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: 0.375rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">📷 Barcode Scanner</h1>
+      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <div class="scanner-container">
+      <div class="card">
+        <h2 class="card-title">Scan Barcode/QR Code</h2>
+        
+        <div id="scannerNotSupported" style="display: none;">
+          <div class="empty-state">
+            <p>Camera not supported on this device.</p>
+          </div>
+        </div>
+
+        <div id="scannerSection" style="display: none;">
+          <div class="video-container">
+            <video id="scannerVideo" autoplay playsinline></video>
+            <canvas id="scannerCanvas" style="display: none;"></canvas>
+            <div class="scanner-overlay"></div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Scan Mode</label>
+            <select id="scanMode" class="form-select" onchange="switchScanMode()">
+              <option value="qr">QR Code</option>
+              <option value="barcode">Barcode</option>
+              <option value="both">Both (Auto-detect)</option>
+            </select>
+          </div>
+
+          <div class="scanner-controls">
+            <button id="startScanBtn" onclick="startScanning()" class="btn btn-primary">Start Scanning</button>
+            <button id="stopScanBtn" onclick="stopScanning()" class="btn btn-secondary" style="display: none;">Stop Scanning</button>
+          </div>
+
+          <div id="scanResult" class="scan-result" style="display: none;">
+            <h3>Scan Result:</h3>
+            <div id="scanResultContent"></div>
+            <button onclick="handleScanResult()" class="btn btn-primary" style="margin-top: 1rem;">View Medicine</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+          <h3 style="margin-bottom: 1rem;">Or Upload Image</h3>
+          <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload(event)" class="form-input">
+        </div>
+      </div>
+
+      <!-- Generate QR Code Section -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <h2 class="card-title">Generate QR Code</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+          Generate QR code for a medicine to enable quick scanning.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Select Medicine</label>
+          <select id="medicineSelect" class="form-select">
+            <option value="">Select a medicine...</option>
+          </select>
+        </div>
+
+        <div id="qrCodeDisplay" style="display: none; text-align: center; margin-top: 1.5rem;">
+          <img id="qrCodeImage" src="" alt="QR Code" style="max-width: 200px; border: 1px solid var(--border-color); border-radius: 0.375rem;">
+          <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);" id="qrCodeInfo"></p>
+          <button onclick="downloadQRCode()" class="btn btn-secondary" style="margin-top: 1rem;">Download QR Code</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- Barcode/QR Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.0/dist/index.min.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/barcode.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let currentStream = null;
+    let scannedData = null;
+    let allMedicines = [];
+    let scanner = null;
+    let qrScanner = null;
+    let barcodeScanner = null;
+    let currentScanMode = 'qr';
+
+    // Check camera support
+    function checkCameraSupport() {
+      if (!hasCamera()) {
+        document.getElementById('scannerNotSupported').style.display = 'block';
+        return false;
+      }
+      document.getElementById('scannerSection').style.display = 'block';
+      return true;
+    }
+
+    // Switch scan mode
+    function switchScanMode() {
+      const mode = document.getElementById('scanMode').value;
+      currentScanMode = mode;
+      
+      // Stop current scanner if running
+      if (scanner) {
+        scanner.stop();
+        scanner = null;
+      }
+    }
+
+    // Start scanning
+    async function startScanning() {
+      const video = document.getElementById('scannerVideo');
+      const canvas = document.getElementById('scannerCanvas');
+      
+      const mode = document.getElementById('scanMode').value;
+      currentScanMode = mode;
+
+      try {
+        // Initialize appropriate scanner
+        if (mode === 'qr' || mode === 'both') {
+          qrScanner = setupQRScanner(video, canvas, handleScan);
+        }
+        if (mode === 'barcode' || mode === 'both') {
+          barcodeScanner = setupBarcodeScanner(video, canvas, handleScan);
+        }
+
+        // Start the appropriate scanner
+        let result;
+        if (mode === 'qr') {
+          scanner = qrScanner;
+          result = await qrScanner.start();
+        } else if (mode === 'barcode') {
+          scanner = barcodeScanner;
+          result = await barcodeScanner.start();
+        } else {
+          // Try both
+          if (qrScanner) {
+            qrScanner.start();
+          }
+          if (barcodeScanner) {
+            result = await barcodeScanner.start();
+            scanner = barcodeScanner; // Primary scanner
+          }
+        }
+
+        if (result && result.success) {
+          document.getElementById('startScanBtn').style.display = 'none';
+          document.getElementById('stopScanBtn').style.display = 'inline-block';
+          showMessage('Scanner started. Point camera at QR code or barcode.', 'success');
+        } else if (result && !result.success) {
+          showMessage('Error: ' + result.error, 'error');
+        } else {
+          // QR scanner started without result
+          document.getElementById('startScanBtn').style.display = 'none';
+          document.getElementById('stopScanBtn').style.display = 'inline-block';
+          showMessage('Scanner started. Point camera at QR code or barcode.', 'success');
+        }
+      } catch (error) {
+        showMessage('Error starting scanner: ' + error.message, 'error');
+        console.error('Scanner error:', error);
+      }
+    }
+
+    // Stop scanning
+    function stopScanning() {
+      if (scanner) {
+        scanner.stop();
+        scanner = null;
+      }
+      
+      if (qrScanner) {
+        qrScanner.stop();
+        qrScanner = null;
+      }
+      
+      if (barcodeScanner) {
+        barcodeScanner.stop();
+        barcodeScanner = null;
+      }
+
+      if (currentStream) {
+        stopBarcodeScanner(currentStream);
+        currentStream = null;
+      }
+      
+      const video = document.getElementById('scannerVideo');
+      video.srcObject = null;
+      
+      document.getElementById('startScanBtn').style.display = 'inline-block';
+      document.getElementById('stopScanBtn').style.display = 'none';
+      document.getElementById('scanResult').style.display = 'none';
+    }
+
+    // Handle scan result
+    function handleScan(data) {
+      // Stop scanning on successful scan
+      stopScanning();
+      
+      // Handle different data formats
+      let parsedData;
+      if (typeof data === 'string') {
+        try {
+          parsedData = JSON.parse(data);
+        } catch (e) {
+          // Not JSON, might be barcode
+          parsedData = { type: 'barcode', code: data };
+        }
+      } else {
+        parsedData = data;
+      }
+
+      scannedData = parsedData;
+      
+      if (scannedData && scannedData.type === 'medicine') {
+        document.getElementById('scanResultContent').innerHTML = `
+          <p><strong>Medicine:</strong> ${escapeHtml(scannedData.name || 'Unknown')}</p>
+          <p><strong>Batch:</strong> ${escapeHtml(scannedData.batch || 'N/A')}</p>
+          <p><strong>ID:</strong> ${scannedData.id}</p>
+        `;
+        document.getElementById('scanResult').style.display = 'block';
+        showMessage('Scan successful!', 'success');
+        
+        // Auto-navigate after 2 seconds
+        setTimeout(() => {
+          if (scannedData && scannedData.id) {
+            handleScanResult();
+          }
+        }, 2000);
+      } else if (scannedData && scannedData.type === 'barcode') {
+        // Try to find medicine by batch number
+        const medicine = allMedicines.find(m => m.batch === scannedData.code);
+        if (medicine) {
+          scannedData = { id: medicine.id, name: medicine.name, batch: medicine.batch, type: 'medicine' };
+          document.getElementById('scanResultContent').innerHTML = `
+            <p><strong>Medicine:</strong> ${escapeHtml(medicine.name)}</p>
+            <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+            <p><strong>ID:</strong> ${medicine.id}</p>
+          `;
+          document.getElementById('scanResult').style.display = 'block';
+          showMessage('Scan successful!', 'success');
+          setTimeout(() => handleScanResult(), 2000);
+        } else {
+          showMessage('Barcode not found in inventory. Code: ' + scannedData.code, 'warning');
+        }
+      } else {
+        showMessage('Invalid QR code or barcode format', 'error');
+      }
+    }
+
+    // Handle scan result button
+    function handleScanResult() {
+      if (scannedData && scannedData.id) {
+        window.location.href = `dashboard.html?highlight=${scannedData.id}`;
+      }
+    }
+
+    // Handle image upload
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const result = await scanQRFromImage(file);
+        if (result.success) {
+          handleScan(result.data);
+        } else {
+          showMessage(result.error || 'Could not read QR code from image', 'error');
+        }
+      } catch (error) {
+        showMessage('Error scanning image: ' + error.message, 'error');
+      }
+    }
+
+    // Load medicines for QR generation
+    async function loadMedicines() {
+      allMedicines = await getAllMedicines();
+      const select = document.getElementById('medicineSelect');
+      
+      select.innerHTML = '<option value="">Select a medicine...</option>' +
+        allMedicines.map(med => `
+          <option value="${med.id}">${escapeHtml(med.name)} - ${escapeHtml(med.batch)}</option>
+        `).join('');
+
+      select.addEventListener('change', (e) => {
+        const medicineId = e.target.value;
+        if (medicineId) {
+          generateQRForMedicine(medicineId);
+        } else {
+          document.getElementById('qrCodeDisplay').style.display = 'none';
+        }
+      });
+    }
+
+    // Generate QR code for medicine
+    function generateQRForMedicine(medicineId) {
+      const medicine = allMedicines.find(m => m.id === medicineId);
+      if (!medicine) return;
+
+      const qrData = formatMedicineForQR(medicine);
+      const qrCodeUrl = generateQRCode(medicine.id, medicine.name, medicine.batch);
+      
+      document.getElementById('qrCodeImage').src = qrCodeUrl;
+      document.getElementById('qrCodeInfo').textContent = `${medicine.name} - ${medicine.batch}`;
+      document.getElementById('qrCodeDisplay').style.display = 'block';
+      
+      // Store for download
+      window.currentQRCode = { url: qrCodeUrl, medicine: medicine };
+    }
+
+    // Download QR code
+    function downloadQRCode() {
+      if (!window.currentQRCode) return;
+      
+      const link = document.createElement('a');
+      link.href = window.currentQRCode.url;
+      link.download = `qr-${window.currentQRCode.medicine.name.replace(/\s+/g, '-')}-${window.currentQRCode.medicine.batch}.png`;
+      link.click();
+    }
+
+    // Show message
+    function showMessage(message, type = 'info') {
+      const container = document.createElement('div');
+      container.className = `message message-${type}`;
+      container.textContent = message;
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.right = '20px';
+      container.style.zIndex = '10000';
+      document.body.appendChild(container);
+      
+      setTimeout(() => container.remove(), 3000);
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize page
+    async function initPage() {
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+
+      checkCameraSupport();
+      await loadMedicines();
+    }
+
+    initPage();
+  </script>
+</body>
+</html>
+

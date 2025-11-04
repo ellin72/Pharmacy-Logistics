@@ -1,5 +1,52 @@
 // Alert management functions
 
+// Trigger notification when alert is created
+async function triggerAlertNotification(alert) {
+  try {
+    // Add to notification center
+    if (typeof addToNotificationCenter === 'function') {
+      addToNotificationCenter({
+        title: `Alert: ${alert.medicineName}`,
+        message: alert.type === 'expired' ? 'Medicine has expired' :
+                alert.type === 'expiry_soon' ? `Expires on ${alert.dueOn ? new Date(alert.dueOn).toLocaleDateString() : 'soon'}` :
+                'Stock is below minimum threshold',
+        type: alert.type === 'expired' ? 'error' : 
+              alert.type === 'expiry_soon' ? 'warning' : 'warning'
+      });
+    }
+
+    // Show in-app notification
+    if (typeof showInAppNotification === 'function') {
+      const message = alert.type === 'expired' ? 
+        `🚨 ${alert.medicineName} has expired!` :
+        alert.type === 'expiry_soon' ? 
+        `⚠️ ${alert.medicineName} expiring soon` :
+        `📉 ${alert.medicineName} is low on stock`;
+      
+      showInAppNotification(message, alert.type === 'expired' ? 'error' : 'warning', 8000);
+    }
+
+    // Show browser notification if permission granted
+    if (typeof showBrowserNotification === 'function' && typeof checkNotificationPermission === 'function') {
+      const permission = checkNotificationPermission();
+      if (permission.granted) {
+        showBrowserNotification(
+          `Alert: ${alert.medicineName}`,
+          {
+            body: alert.type === 'expired' ? 'This medicine has expired' :
+                  alert.type === 'expiry_soon' ? 'Expiring soon - action needed' :
+                  'Low stock - reorder needed',
+            tag: `alert-${alert.id}`,
+            requireInteraction: alert.type === 'expired'
+          }
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error triggering alert notification:', error);
+  }
+}
+
 // Get all active alerts
 async function getAllAlerts() {
   try {

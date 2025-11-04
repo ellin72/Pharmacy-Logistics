@@ -114,6 +114,35 @@ If you need to store additional user information beyond Firebase Auth:
 
 ---
 
+### `notificationPreferences`
+
+Stores user notification preferences.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `emailEnabled` | boolean | Yes | Whether email notifications are enabled |
+| `emailFrequency` | string | Yes | Frequency: `"immediate"`, `"daily"`, `"weekly"` |
+| `types` | object | Yes | Object with `expired`, `expiry_soon`, `low_stock` boolean flags |
+| `lastEmailSent` | timestamp | Optional | Last time email notification was sent |
+| `updatedAt` | timestamp | Yes | Last update timestamp |
+
+**Example:**
+```json
+{
+  "emailEnabled": true,
+  "emailFrequency": "daily",
+  "types": {
+    "expired": true,
+    "expiry_soon": true,
+    "low_stock": false
+  },
+  "lastEmailSent": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}
+```
+
+---
+
 ## Firestore Security Rules (Recommended)
 
 ```javascript

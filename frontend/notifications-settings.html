@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification Settings - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">🔔 Notification Settings</h1>
+      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <!-- Browser Notifications -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <h2 class="card-title">Browser Notifications</h2>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Enable browser notifications to receive alerts even when the app is not open.
+      </p>
+      <div id="browserNotificationStatus"></div>
+      <button onclick="handleBrowserNotificationPermission()" class="btn btn-primary" id="browserNotificationBtn">
+        Enable Browser Notifications
+      </button>
+    </div>
+
+    <!-- Email Notifications -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <h2 class="card-title">Email Notifications</h2>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Receive email alerts for critical inventory issues. (Requires Cloud Functions setup)
+      </p>
+      
+      <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="emailEnabled" onchange="updateEmailSettings()">
+          <span>Enable Email Notifications</span>
+        </label>
+      </div>
+
+      <div id="emailSettings" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Notification Frequency</label>
+          <select id="emailFrequency" class="form-select" onchange="updateEmailSettings()">
+            <option value="immediate">Immediate (as alerts occur)</option>
+            <option value="daily">Daily Summary</option>
+            <option value="weekly">Weekly Summary</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Alert Types</label>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="emailExpired" checked onchange="updateEmailSettings()">
+              <span>Expired Medicines</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="emailExpiringSoon" checked onchange="updateEmailSettings()">
+              <span>Expiring Soon (within 30 days)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="emailLowStock" checked onchange="updateEmailSettings()">
+              <span>Low Stock Alerts</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div id="emailMessageContainer"></div>
+    </div>
+
+    <!-- In-App Notification Center -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Notification Center</h2>
+        <button onclick="clearNotifications()" class="btn btn-sm btn-secondary">Clear All</button>
+      </div>
+      <div id="notificationCenterList">
+        <div class="loading">Loading notifications...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let notificationPreferences = null;
+
+    // Load notification preferences
+    async function loadPreferences() {
+      notificationPreferences = await getNotificationPreferences();
+      
+      if (notificationPreferences) {
+        document.getElementById('emailEnabled').checked = notificationPreferences.emailEnabled || false;
+        document.getElementById('emailFrequency').value = notificationPreferences.emailFrequency || 'daily';
+        document.getElementById('emailExpired').checked = notificationPreferences.types?.expired !== false;
+        document.getElementById('emailExpiringSoon').checked = notificationPreferences.types?.expiry_soon !== false;
+        document.getElementById('emailLowStock').checked = notificationPreferences.types?.low_stock !== false;
+        
+        document.getElementById('emailSettings').style.display = notificationPreferences.emailEnabled ? 'block' : 'none';
+      }
+
+      updateBrowserNotificationStatus();
+      renderNotificationCenter();
+    }
+
+    // Update email settings
+    async function updateEmailSettings() {
+      const emailEnabled = document.getElementById('emailEnabled').checked;
+      document.getElementById('emailSettings').style.display = emailEnabled ? 'block' : 'none';
+
+      if (!notificationPreferences) {
+        notificationPreferences = await getNotificationPreferences();
+      }
+
+      notificationPreferences.emailEnabled = emailEnabled;
+      notificationPreferences.emailFrequency = document.getElementById('emailFrequency').value;
+      notificationPreferences.types = {
+        expired: document.getElementById('emailExpired').checked,
+        expiry_soon: document.getElementById('emailExpiringSoon').checked,
+        low_stock: document.getElementById('emailLowStock').checked
+      };
+
+      const result = await saveNotificationPreferences(notificationPreferences);
+      
+      if (result.success) {
+        showMessage('Settings saved successfully!', 'success');
+      } else {
+        showMessage('Error saving settings: ' + result.error, 'error');
+      }
+    }
+
+    // Browser notification permission
+    async function handleBrowserNotificationPermission() {
+      const result = await requestNotificationPermission();
+      
+      if (result.granted) {
+        showMessage('Browser notifications enabled!', 'success');
+        showBrowserNotification('Notifications Enabled', {
+          body: 'You will now receive alerts for critical inventory issues.',
+          tag: 'notification-enabled'
+        });
+      } else {
+        showMessage(result.message || 'Notifications not enabled', 'warning');
+      }
+      
+      updateBrowserNotificationStatus();
+    }
+
+    // Update browser notification status
+    function updateBrowserNotificationStatus() {
+      const status = checkNotificationPermission();
+      const statusEl = document.getElementById('browserNotificationStatus');
+      const btn = document.getElementById('browserNotificationBtn');
+
+      if (!status.supported) {
+        statusEl.innerHTML = '<p style="color: var(--warning-color);">Browser does not support notifications.</p>';
+        btn.style.display = 'none';
+        return;
+      }
+
+      if (status.granted) {
+        statusEl.innerHTML = '<p style="color: var(--success-color);">✅ Browser notifications are enabled</p>';
+        btn.textContent = 'Notifications Enabled';
+        btn.disabled = true;
+        btn.classList.add('btn-success');
+      } else {
+        statusEl.innerHTML = '<p style="color: var(--text-secondary);">Browser notifications are not enabled. Click the button to enable them.</p>';
+        btn.textContent = 'Enable Browser Notifications';
+        btn.disabled = false;
+        btn.classList.remove('btn-success');
+      }
+    }
+
+    // Render notification center
+    window.renderNotificationCenter = function() {
+      const notifications = getNotificationCenter();
+      const container = document.getElementById('notificationCenterList');
+
+      if (notifications.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No notifications yet.</p></div>';
+        return;
+      }
+
+      container.innerHTML = notifications.map(notif => {
+        const typeIcon = notif.type === 'error' ? '🚨' : 
+                        notif.type === 'warning' ? '⚠️' : 
+                        notif.type === 'success' ? '✅' : 'ℹ️';
+        
+        return `
+          <div class="alert-item ${notif.type || 'info'}" style="margin-bottom: 0.75rem;">
+            <div class="alert-content">
+              <div class="alert-title">${typeIcon} ${escapeHtml(notif.title || 'Notification')}</div>
+              <div class="alert-description">${escapeHtml(notif.message || '')}</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                ${notif.timestamp ? new Date(notif.timestamp).toLocaleString() : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // Clear notifications
+    function clearNotifications() {
+      if (confirm('Clear all notifications?')) {
+        clearNotificationCenter();
+      }
+    }
+
+    // Show message
+    function showMessage(message, type = 'info') {
+      const container = document.getElementById('emailMessageContainer');
+      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 3000);
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize page
+    async function initPage() {
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+
+      await loadPreferences();
+    }
+
+    initPage();
+  </script>
+</body>
+</html>
+

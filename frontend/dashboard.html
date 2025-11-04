@@ -13,6 +13,7 @@
       <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
       <div class="user-menu">
         <span class="user-info" id="userEmail"></span>
+        <a href="notifications-settings.html" class="btn btn-secondary btn-sm" title="Notifications">🔔</a>
         <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
       </div>
     </div>
@@ -20,10 +21,40 @@
 
   <div class="container">
     <div class="dashboard-header">
-      <h1 class="dashboard-title">Inventory Dashboard</h1>
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <h1 class="dashboard-title" style="margin: 0;">Inventory Dashboard</h1>
+        <div id="onlineStatus" style="display: none; padding: 0.5rem 1rem; background: var(--warning-color); color: white; border-radius: 0.375rem; font-size: 0.875rem;">
+          ⚠️ Offline
+        </div>
+        <div id="offlineQueueIndicator" style="display: none; padding: 0.5rem 1rem; background: var(--info-color); color: white; border-radius: 0.375rem; font-size: 0.875rem;">
+          0 queued
+        </div>
+      </div>
       <div class="flex gap-2">
         <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">📋 Order List</a>
         <a href="add-medicine.html" class="btn btn-primary">+ Add Medicine</a>
+      </div>
+    </div>
+
+    <!-- Dashboard Stats -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Medicines</strong>
+          <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);" id="totalMedicines">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Stock Units</strong>
+          <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);" id="totalStock">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Low Stock Items</strong>
+          <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);" id="lowStockCountBadge">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Expiring Soon</strong>
+          <div style="font-size: 2rem; font-weight: bold; color: var(--danger-color);" id="expiringSoonCount">0</div>
+        </div>
       </div>
     </div>
 
@@ -33,9 +64,11 @@
         <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">
           📋 View Order List (<span id="lowStockCount">0</span> items)
         </a>
-        <span style="color: var(--text-secondary); font-size: 0.875rem;">
-          Medicines below minimum threshold
-        </span>
+        <a href="transactions.html" class="btn btn-secondary">📊 Transaction History</a>
+        <a href="bulk-operations.html" class="btn btn-secondary">⚡ Bulk Operations</a>
+        <a href="barcode-scanner.html" class="btn btn-secondary">📷 Scanner</a>
+        <button onclick="exportInventory()" class="btn btn-secondary">📥 Export</button>
+        <button onclick="printInventory()" class="btn btn-secondary">🖨️ Print</button>
       </div>
     </div>
 
@@ -110,6 +143,12 @@
   <script src="js/inventory.js"></script>
   <script src="js/alerts.js"></script>
   <script src="js/users.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/offline.js"></script>
+  <script src="js/indexeddb.js"></script>
+  <script src="js/mobile.js"></script>
+  <script src="js/conflict-resolution.js"></script>
   
   <script>
     let currentFilter = 'all';
@@ -199,6 +238,38 @@
         </tr>
       `;
       }).join('');
+    }
+
+    // Sort table
+    function sortTable(column) {
+      if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+      }
+      
+      const medicines = filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
+      const sorted = [...medicines].sort((a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+        
+        if (column === 'expiryDate') {
+          aVal = aVal ? new Date(aVal).getTime() : 0;
+          bVal = bVal ? new Date(bVal).getTime() : 0;
+        } else if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = bVal.toLowerCase();
+        }
+        
+        if (sortDirection === 'asc') {
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        } else {
+          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        }
+      });
+      
+      renderInventory(sorted);
     }
 
     // Filter medicines
@@ -332,6 +403,42 @@
       }
     }
 
+    // Update dashboard statistics
+    function updateDashboardStats(medicines) {
+      // Update low stock count
+      const lowStockCount = medicines.filter(m => 
+        m.status === 'low_stock' || m.quantity <= m.minThreshold
+      ).length;
+      const lowStockCountEl = document.getElementById('lowStockCount');
+      if (lowStockCountEl) {
+        lowStockCountEl.textContent = lowStockCount;
+      }
+      
+      // Update stats badges
+      const totalMedicinesEl = document.getElementById('totalMedicines');
+      const totalStockEl = document.getElementById('totalStock');
+      const lowStockBadgeEl = document.getElementById('lowStockCountBadge');
+      const expiringSoonEl = document.getElementById('expiringSoonCount');
+      
+      if (totalMedicinesEl) totalMedicinesEl.textContent = medicines.length;
+      if (totalStockEl) totalStockEl.textContent = medicines.reduce((sum, m) => sum + (m.quantity || 0), 0);
+      if (lowStockBadgeEl) lowStockBadgeEl.textContent = lowStockCount;
+      if (expiringSoonEl) expiringSoonEl.textContent = medicines.filter(m => 
+        m.status === 'expiring_soon'
+      ).length;
+    }
+
+    // Export inventory
+    function exportInventory() {
+      exportInventoryToCSV(filteredMedicines.length > 0 ? filteredMedicines : allMedicines, 'inventory');
+    }
+
+    // Print inventory
+    function printInventory() {
+      const medicines = filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
+      generateInventoryPDF(medicines);
+    }
+
     // Escape HTML to prevent XSS
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -410,15 +517,7 @@
       medicinesUnsubscribe = subscribeToMedicines((medicines) => {
         allMedicines = medicines;
         filterMedicines();
-        
-        // Update low stock count
-        const lowStockCount = medicines.filter(m => 
-          m.status === 'low_stock' || m.quantity <= m.minThreshold
-        ).length;
-        const lowStockCountEl = document.getElementById('lowStockCount');
-        if (lowStockCountEl) {
-          lowStockCountEl.textContent = lowStockCount;
-        }
+        updateDashboardStats(medicines);
       });
 
       // Subscribe to alerts (real-time updates)

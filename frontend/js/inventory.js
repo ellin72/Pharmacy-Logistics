@@ -104,7 +104,16 @@ async function addMedicine(medicineData) {
     return { success: true, id: docRef.id, isUpdate: false };
   } catch (error) {
     console.error('Error adding medicine:', error);
-    return { success: false, error: error.message };
+    
+    if (error.code === 'permission-denied') {
+      return { success: false, error: 'Permission denied. Please check your user role and try again.' };
+    } else if (error.code === 'unavailable') {
+      return { success: false, error: 'Network error. Please check your internet connection and try again.' };
+    } else if (error.code === 'deadline-exceeded') {
+      return { success: false, error: 'Request timeout. Please try again.' };
+    }
+    
+    return { success: false, error: error.message || 'Failed to add medicine. Please try again.' };
   }
 }
 
@@ -304,7 +313,7 @@ async function createOrUpdateAlert(medicineId, medicineName, alertType, dueOn) {
 
     if (existingAlert.empty) {
       // Create new alert
-      await db.collection('alerts').add({
+      const alertRef = await db.collection('alerts').add({
         medicineId: medicineId,
         medicineName: medicineName,
         type: alertType,
@@ -313,6 +322,17 @@ async function createOrUpdateAlert(medicineId, medicineName, alertType, dueOn) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         severity: alertType === 'expired' ? 'high' : (alertType === 'expiry_soon' ? 'medium' : 'low')
       });
+
+      // Trigger notification for new alert
+      const alertDoc = await alertRef.get();
+      if (alertDoc.exists && typeof triggerAlertNotification === 'function') {
+        const alertData = {
+          id: alertDoc.id,
+          ...alertDoc.data(),
+          dueOn: alertDoc.data().dueOn?.toDate() || null
+        };
+        await triggerAlertNotification(alertData);
+      }
     }
   } catch (error) {
     console.error('Error creating alert:', error);
@@ -390,5 +410,18 @@ function subscribeToMedicines(callback) {
     }, (error) => {
       console.error('Error in medicines subscription:', error);
     });
+}
+
+// Helper function for CSV download (used in bulk operations)
+function downloadCSV(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 

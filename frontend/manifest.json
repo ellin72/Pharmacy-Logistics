@@ -1,0 +1,44 @@
+{
+  "name": "Ehafo Clinic Pharmacy Logistics System",
+  "short_name": "Pharmacy Logistics",
+  "description": "Inventory management system for Ehafo Clinic pharmacy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["healthcare", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View inventory dashboard",
+      "url": "/dashboard.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Add Medicine",
+      "short_name": "Add",
+      "description": "Add new medicine",
+      "url": "/add-medicine.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Order List",
+      "short_name": "Orders",
+      "description": "View order list",
+      "url": "/order-list.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}
+

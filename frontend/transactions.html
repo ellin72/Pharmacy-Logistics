@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction History - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">📊 Transaction History</h1>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" onclick="exportTransactions()">📥 Export CSV</button>
+        <button class="btn btn-secondary" onclick="printTransactions()">🖨️ Print</button>
+        <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Filter by Type</label>
+          <select id="typeFilter" class="form-select">
+            <option value="">All Types</option>
+            <option value="add">Add Stock</option>
+            <option value="remove">Remove Stock</option>
+            <option value="adjust">Adjust Stock</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Filter by Medicine</label>
+          <select id="medicineFilter" class="form-select">
+            <option value="">All Medicines</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Date From</label>
+          <input type="date" id="dateFrom" class="form-input">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Date To</label>
+          <input type="date" id="dateTo" class="form-input">
+        </div>
+      </div>
+      <button onclick="applyFilters()" class="btn btn-primary" style="margin-top: 1rem;">Apply Filters</button>
+      <button onclick="clearFilters()" class="btn btn-secondary" style="margin-top: 1rem; margin-left: 0.5rem;">Clear</button>
+    </div>
+
+    <!-- Transaction Stats -->
+    <div class="card" id="transactionStats" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem;">
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Transactions</strong>
+          <div style="font-size: 1.5rem; font-weight: bold;" id="statTotal">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Adds</strong>
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--success-color);" id="statAdds">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Removes</strong>
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--danger-color);" id="statRemoves">0</div>
+        </div>
+        <div>
+          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Adjusts</strong>
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--warning-color);" id="statAdjusts">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">All Transactions</h2>
+        <span id="transactionCount" class="badge">0 transactions</span>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Medicine</th>
+              <th>Batch</th>
+              <th>Type</th>
+              <th>Quantity</th>
+              <th>Previous → New</th>
+              <th>Reason</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody">
+            <tr>
+              <td colspan="8" class="text-center">
+                <div class="loading">Loading transactions...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let allTransactions = [];
+    let filteredTransactions = [];
+    let allMedicines = [];
+    let medicinesMap = {};
+    let currentFilters = {};
+
+    // Format date and time
+    function formatDateTime(date) {
+      if (!date) return 'N/A';
+      const d = new Date(date);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Get medicine name from ID
+    function getMedicineName(medicineId) {
+      return medicinesMap[medicineId]?.name || 'Unknown';
+    }
+
+    function getMedicineBatch(medicineId) {
+      return medicinesMap[medicineId]?.batch || 'N/A';
+    }
+
+    // Render transactions
+    function renderTransactions(transactions) {
+      const tbody = document.getElementById('transactionsTableBody');
+      const countEl = document.getElementById('transactionCount');
+      
+      countEl.textContent = `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`;
+
+      if (transactions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center">
+              <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>No transactions found.</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        updateStats([]);
+        return;
+      }
+
+      tbody.innerHTML = transactions.map(t => {
+        const typeBadge = t.type === 'add' ? 'badge-success' : 
+                         t.type === 'remove' ? 'badge-expired' : 'badge-low-stock';
+        const typeLabel = t.type === 'add' ? 'Add' : 
+                         t.type === 'remove' ? 'Remove' : 'Adjust';
+        
+        return `
+          <tr>
+            <td>${formatDateTime(t.timestamp)}</td>
+            <td><strong>${escapeHtml(getMedicineName(t.medicineId))}</strong></td>
+            <td>${escapeHtml(getMedicineBatch(t.medicineId))}</td>
+            <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
+            <td style="font-weight: bold; color: ${t.quantity >= 0 ? 'var(--success-color)' : 'var(--danger-color)'};">
+              ${t.quantity >= 0 ? '+' : ''}${t.quantity}
+            </td>
+            <td>${t.previousQuantity} → ${t.newQuantity}</td>
+            <td>${escapeHtml(t.reason || '-')}</td>
+            <td style="font-size: 0.75rem; color: var(--text-secondary);">${t.userId?.substring(0, 8) || 'Unknown'}...</td>
+          </tr>
+        `;
+      }).join('');
+
+      updateStats(transactions);
+    }
+
+    // Update statistics
+    function updateStats(transactions) {
+      const stats = {
+        total: transactions.length,
+        adds: transactions.filter(t => t.type === 'add').length,
+        removes: transactions.filter(t => t.type === 'remove').length,
+        adjusts: transactions.filter(t => t.type === 'adjust').length
+      };
+
+      document.getElementById('statTotal').textContent = stats.total;
+      document.getElementById('statAdds').textContent = stats.adds;
+      document.getElementById('statRemoves').textContent = stats.removes;
+      document.getElementById('statAdjusts').textContent = stats.adjusts;
+      
+      document.getElementById('transactionStats').style.display = stats.total > 0 ? 'block' : 'none';
+    }
+
+    // Apply filters
+    function applyFilters() {
+      let filtered = [...allTransactions];
+      
+      const typeFilter = document.getElementById('typeFilter').value;
+      const medicineFilter = document.getElementById('medicineFilter').value;
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+
+      if (typeFilter) {
+        filtered = filtered.filter(t => t.type === typeFilter);
+      }
+
+      if (medicineFilter) {
+        filtered = filtered.filter(t => t.medicineId === medicineFilter);
+      }
+
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        filtered = filtered.filter(t => {
+          if (!t.timestamp) return false;
+          return new Date(t.timestamp) >= fromDate;
+        });
+      }
+
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(t => {
+          if (!t.timestamp) return false;
+          return new Date(t.timestamp) <= toDate;
+        });
+      }
+
+      filteredTransactions = filtered;
+      renderTransactions(filtered);
+    }
+
+    // Clear filters
+    function clearFilters() {
+      document.getElementById('typeFilter').value = '';
+      document.getElementById('medicineFilter').value = '';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      filteredTransactions = allTransactions;
+      renderTransactions(allTransactions);
+    }
+
+    // Export transactions
+    function exportTransactions() {
+      const transactions = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+      exportTransactionsToCSV(transactions, medicinesMap, 'transactions');
+    }
+
+    // Print transactions
+    function printTransactions() {
+      const transactions = filteredTransactions.length > 0 ? filteredTransactions : allTransactions;
+      const tableRows = transactions.map(t => `
+        <tr>
+          <td>${formatDateTime(t.timestamp)}</td>
+          <td>${escapeHtml(getMedicineName(t.medicineId))}</td>
+          <td>${escapeHtml(getMedicineBatch(t.medicineId))}</td>
+          <td>${t.type}</td>
+          <td>${t.quantity}</td>
+          <td>${t.previousQuantity} → ${t.newQuantity}</td>
+          <td>${escapeHtml(t.reason || '-')}</td>
+        </tr>
+      `).join('');
+
+      const content = `
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Medicine</th>
+              <th>Batch</th>
+              <th>Type</th>
+              <th>Quantity</th>
+              <th>Previous → New</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        <p style="margin-top: 20px; color: #6b7280;">
+          Total Transactions: ${transactions.length}
+        </p>
+      `;
+      
+      generatePDFReport('Transaction History Report', content, 'transactions-report');
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize page
+    async function initPage() {
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+
+      // Load medicines for mapping
+      allMedicines = await getAllMedicines();
+      medicinesMap = {};
+      allMedicines.forEach(med => {
+        medicinesMap[med.id] = med;
+      });
+
+      // Populate medicine filter
+      const medicineFilter = document.getElementById('medicineFilter');
+      allMedicines.forEach(med => {
+        const option = document.createElement('option');
+        option.value = med.id;
+        option.textContent = `${med.name} (${med.batch})`;
+        medicineFilter.appendChild(option);
+      });
+
+      // Load transactions
+      allTransactions = await getAllTransactions();
+      filteredTransactions = allTransactions;
+      renderTransactions(allTransactions);
+    }
+
+    initPage();
+  </script>
+</body>
+</html>
+

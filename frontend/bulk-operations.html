@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Operations - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">⚡ Bulk Operations</h1>
+      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border-color);">
+        <button class="tab-btn active" onclick="switchTab('adjust')" data-tab="adjust">Bulk Stock Adjustment</button>
+        <button class="tab-btn" onclick="switchTab('import')" data-tab="import">Import from CSV</button>
+      </div>
+    </div>
+
+    <!-- Bulk Stock Adjustment Tab -->
+    <div id="adjustTab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Bulk Stock Adjustment</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+          Select multiple medicines and adjust their stock in one operation.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Select Medicines</label>
+          <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 1rem;">
+            <div id="medicinesChecklist">
+              <div class="loading">Loading medicines...</div>
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem;">
+            <button onclick="selectAll()" class="btn btn-sm btn-secondary">Select All</button>
+            <button onclick="deselectAll()" class="btn btn-sm btn-secondary">Deselect All</button>
+            <span id="selectedCount" style="margin-left: 1rem; color: var(--text-secondary);">0 selected</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Operation Type *</label>
+          <select id="bulkOperationType" class="form-select" required>
+            <option value="">Select operation...</option>
+            <option value="add">Add Stock (Increase)</option>
+            <option value="remove">Remove Stock (Decrease)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="bulkQuantity" class="form-label">Quantity *</label>
+          <input type="number" id="bulkQuantity" class="form-input" required min="1" step="1" placeholder="Enter quantity">
+          <small style="color: var(--text-secondary); font-size: 0.75rem;">
+            This quantity will be applied to all selected medicines
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="bulkReason" class="form-label">Reason (Optional)</label>
+          <textarea id="bulkReason" class="form-textarea" placeholder="e.g., Monthly restock, Inventory correction..."></textarea>
+        </div>
+
+        <div id="bulkMessageContainer"></div>
+
+        <button onclick="executeBulkAdjustment()" class="btn btn-primary">Execute Bulk Adjustment</button>
+      </div>
+    </div>
+
+    <!-- Import CSV Tab -->
+    <div id="importTab" class="tab-content" style="display: none;">
+      <div class="card">
+        <h2 class="card-title">Import Medicines from CSV</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+          Upload a CSV file to import multiple medicines at once.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">CSV File Format</label>
+          <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+            <p style="font-size: 0.875rem; margin-bottom: 0.5rem;"><strong>Required columns:</strong></p>
+            <code style="font-size: 0.75rem; display: block; margin-bottom: 0.5rem;">
+              name, batch, expiryDate, quantity, minThreshold
+            </code>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem;"><strong>Optional:</strong> notes</p>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+              Date format: YYYY-MM-DD (e.g., 2025-12-31)
+            </p>
+          </div>
+          <a href="javascript:void(0)" onclick="downloadCSVTemplate()" class="btn btn-sm btn-secondary">📥 Download CSV Template</a>
+        </div>
+
+        <div class="form-group">
+          <label for="csvFile" class="form-label">Select CSV File *</label>
+          <input type="file" id="csvFile" class="form-input" accept=".csv" required>
+        </div>
+
+        <div id="importPreview" style="display: none; margin-top: 1.5rem;">
+          <h3 style="margin-bottom: 1rem;">Preview (First 5 rows)</h3>
+          <div class="table-container">
+            <table class="table" id="previewTable"></table>
+          </div>
+        </div>
+
+        <div id="importMessageContainer"></div>
+
+        <button onclick="importCSV()" class="btn btn-primary" id="importBtn" disabled>Import Medicines</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/users.js"></script>
+  
+  <script>
+    let allMedicines = [];
+    let selectedMedicines = new Set();
+
+    // Tab switching
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+      
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      document.getElementById(`${tab}Tab`).style.display = 'block';
+    }
+
+    // Load medicines for selection
+    async function loadMedicines() {
+      allMedicines = await getAllMedicines();
+      renderMedicinesChecklist();
+    }
+
+    // Render medicines checklist
+    function renderMedicinesChecklist() {
+      const container = document.getElementById('medicinesChecklist');
+      
+      if (allMedicines.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No medicines found.</p></div>';
+        return;
+      }
+
+      container.innerHTML = allMedicines.map(med => `
+        <label style="display: flex; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color); cursor: pointer;">
+          <input type="checkbox" value="${med.id}" onchange="updateSelection()" style="margin-right: 0.75rem;">
+          <div style="flex: 1;">
+            <strong>${escapeHtml(med.name)}</strong> - ${escapeHtml(med.batch)}
+            <span style="color: var(--text-secondary); font-size: 0.875rem; margin-left: 0.5rem;">
+              (Stock: ${med.quantity})
+            </span>
+          </div>
+        </label>
+      `).join('');
+
+      updateSelection();
+    }
+
+    // Update selection count
+    function updateSelection() {
+      const checkboxes = document.querySelectorAll('#medicinesChecklist input[type="checkbox"]:checked');
+      selectedMedicines = new Set(Array.from(checkboxes).map(cb => cb.value));
+      document.getElementById('selectedCount').textContent = `${selectedMedicines.size} selected`;
+    }
+
+    // Select all
+    function selectAll() {
+      document.querySelectorAll('#medicinesChecklist input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+      });
+      updateSelection();
+    }
+
+    // Deselect all
+    function deselectAll() {
+      document.querySelectorAll('#medicinesChecklist input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
+      updateSelection();
+    }
+
+    // Execute bulk adjustment
+    async function executeBulkAdjustment() {
+      if (selectedMedicines.size === 0) {
+        showMessage('Please select at least one medicine.', 'error');
+        return;
+      }
+
+      const operationType = document.getElementById('bulkOperationType').value;
+      const quantity = parseInt(document.getElementById('bulkQuantity').value);
+      const reason = document.getElementById('bulkReason').value.trim();
+
+      if (!operationType || !quantity || quantity <= 0) {
+        showMessage('Please fill in all required fields.', 'error');
+        return;
+      }
+
+      const confirmBulk = confirm(
+        `Are you sure you want to ${operationType === 'add' ? 'add' : 'remove'} ${quantity} units to/from ${selectedMedicines.size} medicine(s)?`
+      );
+
+      if (!confirmBulk) return;
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const medicineId of selectedMedicines) {
+        try {
+          const result = await updateStock(medicineId, operationType, quantity, reason || `Bulk ${operationType}`);
+          if (result.success) {
+            successCount++;
+          } else {
+            errorCount++;
+            const medicine = allMedicines.find(m => m.id === medicineId);
+            errors.push(`${medicine?.name || medicineId}: ${result.error}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`Error: ${error.message}`);
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Execute Bulk Adjustment';
+
+      if (successCount > 0) {
+        showMessage(
+          `Successfully updated ${successCount} medicine(s).${errorCount > 0 ? ` ${errorCount} failed.` : ''}`,
+          errorCount > 0 ? 'error' : 'success'
+        );
+        
+        if (errors.length > 0) {
+          console.error('Bulk operation errors:', errors);
+        }
+
+        // Clear selections
+        deselectAll();
+        document.getElementById('bulkQuantity').value = '';
+        document.getElementById('bulkReason').value = '';
+        document.getElementById('bulkOperationType').value = '';
+      } else {
+        showMessage(`All operations failed. ${errors[0] || 'Unknown error'}`, 'error');
+      }
+    }
+
+    // CSV Import functions
+    function downloadCSVTemplate() {
+      const csv = `name,batch,expiryDate,quantity,minThreshold,notes
+Paracetamol 500mg,BATCH-001,2025-12-31,100,50,Store in cool place
+Ibuprofen 400mg,BATCH-002,2026-06-30,150,75,Anti-inflammatory`;
+      
+      downloadCSV(csv, 'medicine-import-template.csv');
+    }
+
+    function downloadCSV(csvContent, filename) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Preview CSV
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const csv = event.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          showImportMessage('CSV file must have at least a header row and one data row.', 'error');
+          return;
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim());
+        const required = ['name', 'batch', 'expiryDate', 'quantity', 'minThreshold'];
+        const missing = required.filter(r => !headers.includes(r));
+
+        if (missing.length > 0) {
+          showImportMessage(`Missing required columns: ${missing.join(', ')}`, 'error');
+          return;
+        }
+
+        // Show preview
+        const previewRows = lines.slice(1, 6); // First 5 data rows
+        const previewTable = document.getElementById('previewTable');
+        previewTable.innerHTML = `
+          <thead>
+            <tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${previewRows.map(row => {
+              const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+              return `<tr>${values.map(v => `<td>${escapeHtml(v)}</td>`).join('')}</tr>`;
+            }).join('')}
+          </tbody>
+        `;
+        document.getElementById('importPreview').style.display = 'block';
+        document.getElementById('importBtn').disabled = false;
+        showImportMessage(`Ready to import ${lines.length - 1} medicines.`, 'success');
+      };
+
+      reader.readAsText(file);
+    });
+
+    // Import CSV
+    async function importCSV() {
+      const file = document.getElementById('csvFile').files[0];
+      if (!file) {
+        showImportMessage('Please select a CSV file.', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        const csv = event.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+        const btn = document.getElementById('importBtn');
+        btn.disabled = true;
+        btn.textContent = 'Importing...';
+
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const medicine = {};
+          
+          headers.forEach((header, index) => {
+            medicine[header] = values[index] || '';
+          });
+
+          try {
+            const result = await addMedicine({
+              name: medicine.name,
+              batch: medicine.batch,
+              expiryDate: medicine.expirydate || medicine.expiryDate,
+              quantity: parseInt(medicine.quantity) || 0,
+              minThreshold: parseInt(medicine.minthreshold || medicine.minThreshold) || 0,
+              notes: medicine.notes || ''
+            });
+
+            if (result.success) {
+              successCount++;
+            } else {
+              errorCount++;
+              errors.push(`Row ${i + 1} (${medicine.name}): ${result.error}`);
+            }
+          } catch (error) {
+            errorCount++;
+            errors.push(`Row ${i + 1}: ${error.message}`);
+          }
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Import Medicines';
+
+        if (successCount > 0) {
+          showImportMessage(
+            `Successfully imported ${successCount} medicine(s).${errorCount > 0 ? ` ${errorCount} failed.` : ''}`,
+            errorCount > 0 ? 'error' : 'success'
+          );
+          
+          if (errors.length > 0) {
+            console.error('Import errors:', errors);
+          }
+
+          // Reset form
+          document.getElementById('csvFile').value = '';
+          document.getElementById('importPreview').style.display = 'none';
+          document.getElementById('importBtn').disabled = true;
+        } else {
+          showImportMessage(`Import failed. ${errors[0] || 'Unknown error'}`, 'error');
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    // Show messages
+    function showMessage(message, type = 'info') {
+      const container = document.getElementById('bulkMessageContainer');
+      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    function showImportMessage(message, type = 'info') {
+      const container = document.getElementById('importMessageContainer');
+      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize page
+    async function initPage() {
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const userRole = await getUserRole();
+      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
+      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
+
+      await loadMedicines();
+    }
+
+    initPage();
+  </script>
+
+  <style>
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: transparent;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary-color);
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+    }
+
+    .tab-content {
+      display: block;
+    }
+  </style>
+</body>
+</html>
+
