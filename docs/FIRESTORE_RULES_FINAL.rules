@@ -93,6 +93,32 @@ service cloud.firestore {
       // Only admins can delete user documents
       allow delete: if isAdmin();
     }
+    
+    // ==========================================
+    // NOTIFICATION PREFERENCES COLLECTION
+    // ==========================================
+    // Users can read/write their own preferences
+    // Admins can read all preferences (optional - for management)
+    match /notificationPreferences/{userId} {
+      // Users can read their own preferences
+      // Admins can read any user's preferences
+      allow read: if isAuthenticated() && 
+                   (request.auth.uid == userId || isAdmin());
+      
+      // Users can create their own preferences
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId;
+      
+      // Users can update their own preferences
+      // Admins can update any user's preferences
+      allow update: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin());
+      
+      // Users can delete their own preferences
+      // Admins can delete any user's preferences
+      allow delete: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin());
+    }
   }
 }
 
