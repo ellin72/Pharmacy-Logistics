@@ -115,13 +115,32 @@ async function scanQRFromImage(file) {
 
 // Setup barcode scanner using ZXing
 function setupBarcodeScanner(videoElement, canvasElement, onScan) {
+  // Check if ZXing is available
   if (typeof ZXing === 'undefined') {
     console.warn('ZXing library not loaded');
-    return null;
+    // Try alternative namespace
+    if (typeof window.ZXing === 'undefined') {
+      return null;
+    }
   }
 
-  const codeReader = new ZXing.BrowserMultiFormatReader();
+  let codeReader = null;
   let scanning = false;
+  let lastScannedCode = null;
+
+  try {
+    // Try to create code reader
+    const ZXingLib = window.ZXing || ZXing;
+    if (ZXingLib && ZXingLib.BrowserMultiFormatReader) {
+      codeReader = new ZXingLib.BrowserMultiFormatReader();
+    } else {
+      console.error('ZXing BrowserMultiFormatReader not available');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error creating ZXing reader:', error);
+    return null;
+  }
 
   return {
     start: async () => {
@@ -129,40 +148,66 @@ function setupBarcodeScanner(videoElement, canvasElement, onScan) {
         return { success: false, error: 'Camera not available' };
       }
 
+      if (!codeReader) {
+        return { success: false, error: 'Barcode reader not initialized' };
+      }
+
       try {
         scanning = true;
+        lastScannedCode = null;
         
         // Get available video input devices
-        const videoInputDevices = await codeReader.listVideoInputDevices();
+        let videoInputDevices = [];
+        try {
+          videoInputDevices = await codeReader.listVideoInputDevices();
+          console.log('Available cameras:', videoInputDevices.length);
+        } catch (error) {
+          console.warn('Error listing cameras:', error);
+        }
         
         // Use back camera if available, otherwise first available
         let selectedDeviceId = null;
         if (videoInputDevices.length > 0) {
           const backCamera = videoInputDevices.find(device => 
-            device.label.toLowerCase().includes('back') || 
-            device.label.toLowerCase().includes('rear')
+            device.label && (
+              device.label.toLowerCase().includes('back') || 
+              device.label.toLowerCase().includes('rear') ||
+              device.label.toLowerCase().includes('environment')
+            )
           );
           selectedDeviceId = backCamera ? backCamera.deviceId : videoInputDevices[0].deviceId;
+          console.log('Selected camera:', selectedDeviceId);
         }
 
         // Start decoding from video
         codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
-          if (result && scanning) {
-            // Successfully scanned
-            try {
-              const data = JSON.parse(result.text);
-              onScan(data);
-            } catch (e) {
-              // Not JSON, treat as text
-              onScan(result.text);
+          if (result && scanning && result.text) {
+            // Prevent duplicate scans
+            if (lastScannedCode !== result.text) {
+              lastScannedCode = result.text;
+              console.log('Barcode scanned:', result.text);
+              
+              // Successfully scanned
+              try {
+                const data = JSON.parse(result.text);
+                console.log('Parsed as JSON:', data);
+                onScan(data);
+              } catch (e) {
+                // Not JSON, treat as text/barcode
+                console.log('Treating as text/barcode');
+                onScan(result.text);
+              }
             }
           }
           
           if (err && scanning) {
             // Error occurred, but continue scanning
             // Only log if it's not a "not found" error
-            if (err.name !== 'NotFoundException') {
-              console.error('Barcode scan error:', err);
+            if (err.name !== 'NotFoundException' && err.name !== 'ChecksumException') {
+              // Only log non-common errors
+              if (err.message && !err.message.includes('No MultiFormat Readers')) {
+                console.debug('Barcode scan error:', err.name);
+              }
             }
           }
         });
@@ -170,12 +215,20 @@ function setupBarcodeScanner(videoElement, canvasElement, onScan) {
         return { success: true };
       } catch (error) {
         console.error('Error starting barcode scanner:', error);
-        return { success: false, error: error.message };
+        scanning = false;
+        return { success: false, error: error.message || 'Failed to start barcode scanner' };
       }
     },
     stop: () => {
       scanning = false;
-      codeReader.reset();
+      lastScannedCode = null;
+      try {
+        if (codeReader) {
+          codeReader.reset();
+        }
+      } catch (error) {
+        console.error('Error stopping barcode scanner:', error);
+      }
       if (videoElement.srcObject) {
         stopBarcodeScanner(videoElement.srcObject);
       }
@@ -192,9 +245,15 @@ function setupQRScanner(videoElement, canvasElement, onScan) {
 
   let scanning = false;
   let animationFrame = null;
+  let lastScannedCode = null; // Prevent duplicate scans
+  let scanTimeout = null;
 
   const scan = () => {
-    if (!scanning || !videoElement.videoWidth || !videoElement.videoHeight) {
+    if (!scanning) {
+      return;
+    }
+
+    if (!videoElement.videoWidth || !videoElement.videoHeight) {
       animationFrame = requestAnimationFrame(scan);
       return;
     }
@@ -208,17 +267,43 @@ function setupQRScanner(videoElement, canvasElement, onScan) {
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height);
 
-      if (code) {
-        try {
-          const data = JSON.parse(code.data);
-          onScan(data);
-        } catch (e) {
-          onScan(code.data);
+      if (code && code.data) {
+        // Prevent duplicate scans of the same code
+        if (lastScannedCode !== code.data) {
+          lastScannedCode = code.data;
+          
+          // Clear any existing timeout
+          if (scanTimeout) {
+            clearTimeout(scanTimeout);
+          }
+          
+          // Debounce to ensure we only process once
+          scanTimeout = setTimeout(() => {
+            try {
+              // Try to parse as JSON first
+              const data = JSON.parse(code.data);
+              console.log('QR Code scanned (JSON):', data);
+              onScan(data);
+            } catch (e) {
+              // Not JSON, try to parse as medicine data format
+              console.log('QR Code scanned (text):', code.data);
+              
+              // Check if it looks like a medicine ID or batch
+              if (code.data.length > 0) {
+                // Try to parse as medicine reference
+                onScan(code.data);
+              } else {
+                console.warn('Empty QR code data');
+              }
+            }
+          }, 300); // 300ms debounce
         }
       }
     }
 
-    animationFrame = requestAnimationFrame(scan);
+    if (scanning) {
+      animationFrame = requestAnimationFrame(scan);
+    }
   };
 
   return {
@@ -230,18 +315,25 @@ function setupQRScanner(videoElement, canvasElement, onScan) {
       const result = await startBarcodeScanner(videoElement, null);
       if (result.success) {
         scanning = true;
+        lastScannedCode = null; // Reset
         scan();
       }
       return result;
     },
     stop: () => {
       scanning = false;
+      if (scanTimeout) {
+        clearTimeout(scanTimeout);
+        scanTimeout = null;
+      }
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
+        animationFrame = null;
       }
       if (videoElement.srcObject) {
         stopBarcodeScanner(videoElement.srcObject);
       }
+      lastScannedCode = null;
     }
   };
 }

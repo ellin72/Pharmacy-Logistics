@@ -1,4 +1,6 @@
 // IndexedDB for enhanced offline storage
+// Updated: Renamed 'db' to 'indexedDB_db' to avoid conflict with Firestore
+// Version: 2.0 - Fixed db variable conflict
 
 const DB_NAME = 'pharmacy-logistics';
 const DB_VERSION = 1;
@@ -9,7 +11,7 @@ const STORES = {
   OFFLINE_QUEUE: 'offlineQueue'
 };
 
-let db = null;
+let indexedDB_db = null; // Renamed to avoid conflict with Firestore 'db'
 
 // Initialize IndexedDB
 async function initIndexedDB() {
@@ -22,8 +24,8 @@ async function initIndexedDB() {
     };
 
     request.onsuccess = () => {
-      db = request.result;
-      resolve(db);
+      indexedDB_db = request.result;
+      resolve(indexedDB_db);
     };
 
     request.onupgradeneeded = (event) => {
@@ -62,10 +64,10 @@ async function initIndexedDB() {
 
 // Save medicines to IndexedDB
 async function saveMedicinesToIndexedDB(medicines) {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.MEDICINES], 'readwrite');
+    const transaction = indexedDB_db.transaction([STORES.MEDICINES], 'readwrite');
     const store = transaction.objectStore(STORES.MEDICINES);
     
     // Clear existing data
@@ -88,10 +90,10 @@ async function saveMedicinesToIndexedDB(medicines) {
 
 // Get medicines from IndexedDB
 async function getMedicinesFromIndexedDB() {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.MEDICINES], 'readonly');
+    const transaction = indexedDB_db.transaction([STORES.MEDICINES], 'readonly');
     const store = transaction.objectStore(STORES.MEDICINES);
     const request = store.getAll();
     
@@ -107,10 +109,10 @@ async function getMedicinesFromIndexedDB() {
 
 // Save transaction to IndexedDB
 async function saveTransactionToIndexedDB(transaction) {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction_db = db.transaction([STORES.TRANSACTIONS], 'readwrite');
+    const transaction_db = indexedDB_db.transaction([STORES.TRANSACTIONS], 'readwrite');
     const store = transaction_db.objectStore(STORES.TRANSACTIONS);
     
     const request = store.add({
@@ -126,10 +128,10 @@ async function saveTransactionToIndexedDB(transaction) {
 
 // Get unsynced transactions
 async function getUnsyncedTransactions() {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.TRANSACTIONS], 'readonly');
+    const transaction = indexedDB_db.transaction([STORES.TRANSACTIONS], 'readonly');
     const store = transaction.objectStore(STORES.TRANSACTIONS);
     const request = store.getAll();
     
@@ -144,10 +146,10 @@ async function getUnsyncedTransactions() {
 
 // Mark transaction as synced
 async function markTransactionSynced(transactionId) {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.TRANSACTIONS], 'readwrite');
+    const transaction = indexedDB_db.transaction([STORES.TRANSACTIONS], 'readwrite');
     const store = transaction.objectStore(STORES.TRANSACTIONS);
     const request = store.get(transactionId);
     
@@ -169,10 +171,10 @@ async function markTransactionSynced(transactionId) {
 
 // Save offline queue item
 async function saveOfflineQueueItem(item) {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.OFFLINE_QUEUE], 'readwrite');
+    const transaction = indexedDB_db.transaction([STORES.OFFLINE_QUEUE], 'readwrite');
     const store = transaction.objectStore(STORES.OFFLINE_QUEUE);
     
     const request = store.add({
@@ -187,10 +189,10 @@ async function saveOfflineQueueItem(item) {
 
 // Get offline queue items
 async function getOfflineQueueItems() {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.OFFLINE_QUEUE], 'readonly');
+    const transaction = indexedDB_db.transaction([STORES.OFFLINE_QUEUE], 'readonly');
     const store = transaction.objectStore(STORES.OFFLINE_QUEUE);
     const request = store.getAll();
     
@@ -201,10 +203,10 @@ async function getOfflineQueueItems() {
 
 // Remove offline queue item
 async function removeOfflineQueueItem(itemId) {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.OFFLINE_QUEUE], 'readwrite');
+    const transaction = indexedDB_db.transaction([STORES.OFFLINE_QUEUE], 'readwrite');
     const store = transaction.objectStore(STORES.OFFLINE_QUEUE);
     const request = store.delete(itemId);
     
@@ -215,10 +217,10 @@ async function removeOfflineQueueItem(itemId) {
 
 // Clear IndexedDB
 async function clearIndexedDB() {
-  if (!db) await initIndexedDB();
+  if (!indexedDB_db) await initIndexedDB();
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORES.MEDICINES, STORES.TRANSACTIONS, STORES.ALERTS, STORES.OFFLINE_QUEUE], 'readwrite');
+    const transaction = indexedDB_db.transaction([STORES.MEDICINES, STORES.TRANSACTIONS, STORES.ALERTS, STORES.OFFLINE_QUEUE], 'readwrite');
     
     let completed = 0;
     const total = 4;

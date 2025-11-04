@@ -141,7 +141,24 @@
   
   <!-- Barcode/QR Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.0/dist/index.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  
+  <script>
+    // Verify libraries loaded
+    window.addEventListener('load', () => {
+      if (typeof jsQR === 'undefined') {
+        console.error('jsQR library failed to load');
+      } else {
+        console.log('jsQR library loaded successfully');
+      }
+      
+      if (typeof ZXing === 'undefined') {
+        console.error('ZXing library failed to load');
+      } else {
+        console.log('ZXing library loaded successfully');
+      }
+    });
+  </script>
   
   <!-- App Scripts -->
   <script src="js/config.js"></script>
@@ -183,37 +200,67 @@
 
     // Start scanning
     async function startScanning() {
+      // Ensure medicines are loaded
+      if (allMedicines.length === 0) {
+        await loadMedicines();
+      }
+      
       const video = document.getElementById('scannerVideo');
       const canvas = document.getElementById('scannerCanvas');
       
       const mode = document.getElementById('scanMode').value;
       currentScanMode = mode;
 
+      // Reset scan processing
+      window.scanProcessing = false;
+
       try {
         // Initialize appropriate scanner
         if (mode === 'qr' || mode === 'both') {
           qrScanner = setupQRScanner(video, canvas, handleScan);
+          if (!qrScanner) {
+            showMessage('QR scanner not available. Check if jsQR library is loaded.', 'error');
+          }
         }
         if (mode === 'barcode' || mode === 'both') {
           barcodeScanner = setupBarcodeScanner(video, canvas, handleScan);
+          if (!barcodeScanner) {
+            showMessage('Barcode scanner not available. Check if ZXing library is loaded.', 'error');
+          }
         }
 
         // Start the appropriate scanner
         let result;
         if (mode === 'qr') {
+          if (!qrScanner) {
+            showMessage('QR scanner failed to initialize', 'error');
+            return;
+          }
           scanner = qrScanner;
           result = await qrScanner.start();
         } else if (mode === 'barcode') {
+          if (!barcodeScanner) {
+            showMessage('Barcode scanner failed to initialize', 'error');
+            return;
+          }
           scanner = barcodeScanner;
           result = await barcodeScanner.start();
         } else {
           // Try both
+          let qrStarted = false;
           if (qrScanner) {
-            qrScanner.start();
+            const qrResult = await qrScanner.start();
+            qrStarted = qrResult && qrResult.success;
           }
           if (barcodeScanner) {
             result = await barcodeScanner.start();
-            scanner = barcodeScanner; // Primary scanner
+            if (result && result.success) {
+              scanner = barcodeScanner; // Primary scanner
+            }
+          }
+          if (!qrStarted && (!result || !result.success)) {
+            showMessage('Failed to start scanners', 'error');
+            return;
           }
         }
 
@@ -223,8 +270,9 @@
           showMessage('Scanner started. Point camera at QR code or barcode.', 'success');
         } else if (result && !result.success) {
           showMessage('Error: ' + result.error, 'error');
+          console.error('Scanner error:', result.error);
         } else {
-          // QR scanner started without result
+          // QR scanner started without result object (normal for QR)
           document.getElementById('startScanBtn').style.display = 'none';
           document.getElementById('stopScanBtn').style.display = 'inline-block';
           showMessage('Scanner started. Point camera at QR code or barcode.', 'success');
@@ -237,87 +285,181 @@
 
     // Stop scanning
     function stopScanning() {
+      console.log('Stopping scanners...');
+      
       if (scanner) {
-        scanner.stop();
+        try {
+          scanner.stop();
+        } catch (e) {
+          console.error('Error stopping scanner:', e);
+        }
         scanner = null;
       }
       
       if (qrScanner) {
-        qrScanner.stop();
+        try {
+          qrScanner.stop();
+        } catch (e) {
+          console.error('Error stopping QR scanner:', e);
+        }
         qrScanner = null;
       }
       
       if (barcodeScanner) {
-        barcodeScanner.stop();
+        try {
+          barcodeScanner.stop();
+        } catch (e) {
+          console.error('Error stopping barcode scanner:', e);
+        }
         barcodeScanner = null;
       }
 
       if (currentStream) {
-        stopBarcodeScanner(currentStream);
+        try {
+          stopBarcodeScanner(currentStream);
+        } catch (e) {
+          console.error('Error stopping stream:', e);
+        }
         currentStream = null;
       }
       
       const video = document.getElementById('scannerVideo');
-      video.srcObject = null;
+      if (video && video.srcObject) {
+        video.srcObject = null;
+      }
       
       document.getElementById('startScanBtn').style.display = 'inline-block';
       document.getElementById('stopScanBtn').style.display = 'none';
-      document.getElementById('scanResult').style.display = 'none';
+      
+      // Don't hide scan result, let user see it
+      // document.getElementById('scanResult').style.display = 'none';
     }
 
     // Handle scan result
     function handleScan(data) {
+      console.log('handleScan called with:', data);
+      
+      // Prevent multiple rapid calls
+      if (window.scanProcessing) {
+        console.log('Scan already processing, ignoring...');
+        return;
+      }
+      window.scanProcessing = true;
+      
       // Stop scanning on successful scan
       stopScanning();
       
       // Handle different data formats
       let parsedData;
       if (typeof data === 'string') {
+        // Try to parse as JSON first
         try {
           parsedData = JSON.parse(data);
+          console.log('Parsed as JSON:', parsedData);
         } catch (e) {
-          // Not JSON, might be barcode
-          parsedData = { type: 'barcode', code: data };
+          // Not JSON, might be barcode or medicine ID
+          console.log('Not JSON, treating as text:', data);
+          
+          // Check if it's a medicine ID (Firestore ID format)
+          if (data.length === 20 && /^[a-zA-Z0-9]+$/.test(data)) {
+            // Could be a medicine ID
+            const medicine = allMedicines.find(m => m.id === data);
+            if (medicine) {
+              parsedData = { 
+                id: medicine.id, 
+                name: medicine.name, 
+                batch: medicine.batch, 
+                type: 'medicine' 
+              };
+            } else {
+              parsedData = { type: 'barcode', code: data };
+            }
+          } else {
+            // Try to find by batch number
+            const medicine = allMedicines.find(m => m.batch === data);
+            if (medicine) {
+              parsedData = { 
+                id: medicine.id, 
+                name: medicine.name, 
+                batch: medicine.batch, 
+                type: 'medicine' 
+              };
+            } else {
+              parsedData = { type: 'barcode', code: data };
+            }
+          }
         }
-      } else {
+      } else if (data && typeof data === 'object') {
         parsedData = data;
+      } else {
+        console.warn('Unexpected data format:', data);
+        parsedData = { type: 'unknown', raw: data };
       }
 
       scannedData = parsedData;
+      console.log('Final scanned data:', scannedData);
       
-      if (scannedData && scannedData.type === 'medicine') {
+      // Display result
+      if (scannedData && scannedData.type === 'medicine' && scannedData.id) {
+        // Medicine found
         document.getElementById('scanResultContent').innerHTML = `
           <p><strong>Medicine:</strong> ${escapeHtml(scannedData.name || 'Unknown')}</p>
           <p><strong>Batch:</strong> ${escapeHtml(scannedData.batch || 'N/A')}</p>
           <p><strong>ID:</strong> ${scannedData.id}</p>
         `;
         document.getElementById('scanResult').style.display = 'block';
-        showMessage('Scan successful!', 'success');
+        showMessage('✅ Scan successful! Medicine found.', 'success');
         
         // Auto-navigate after 2 seconds
         setTimeout(() => {
+          window.scanProcessing = false;
           if (scannedData && scannedData.id) {
             handleScanResult();
           }
         }, 2000);
       } else if (scannedData && scannedData.type === 'barcode') {
-        // Try to find medicine by batch number
-        const medicine = allMedicines.find(m => m.batch === scannedData.code);
+        // Try to find medicine by batch number or code
+        const medicine = allMedicines.find(m => 
+          m.batch === scannedData.code || 
+          m.id === scannedData.code ||
+          m.name.toLowerCase().includes(scannedData.code.toLowerCase())
+        );
+        
         if (medicine) {
-          scannedData = { id: medicine.id, name: medicine.name, batch: medicine.batch, type: 'medicine' };
+          scannedData = { 
+            id: medicine.id, 
+            name: medicine.name, 
+            batch: medicine.batch, 
+            type: 'medicine' 
+          };
           document.getElementById('scanResultContent').innerHTML = `
             <p><strong>Medicine:</strong> ${escapeHtml(medicine.name)}</p>
             <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
             <p><strong>ID:</strong> ${medicine.id}</p>
           `;
           document.getElementById('scanResult').style.display = 'block';
-          showMessage('Scan successful!', 'success');
-          setTimeout(() => handleScanResult(), 2000);
+          showMessage('✅ Scan successful! Medicine found.', 'success');
+          setTimeout(() => {
+            window.scanProcessing = false;
+            handleScanResult();
+          }, 2000);
         } else {
-          showMessage('Barcode not found in inventory. Code: ' + scannedData.code, 'warning');
+          window.scanProcessing = false;
+          showMessage('⚠️ Barcode not found in inventory. Code: ' + scannedData.code, 'warning');
+          
+          // Show what was scanned
+          document.getElementById('scanResultContent').innerHTML = `
+            <p><strong>Scanned Code:</strong> ${escapeHtml(scannedData.code)}</p>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">
+              This code was not found in the inventory. Make sure the medicine exists in the system.
+            </p>
+          `;
+          document.getElementById('scanResult').style.display = 'block';
         }
       } else {
-        showMessage('Invalid QR code or barcode format', 'error');
+        window.scanProcessing = false;
+        showMessage('❌ Invalid QR code or barcode format. Scanned: ' + (typeof data === 'string' ? data : JSON.stringify(data)), 'error');
+        console.error('Invalid scan data:', data);
       }
     }
 
@@ -433,8 +575,14 @@
       const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
       document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
 
-      checkCameraSupport();
+      // Load medicines first
       await loadMedicines();
+      console.log('Loaded', allMedicines.length, 'medicines');
+      
+      checkCameraSupport();
+      
+      // Reset scan processing flag
+      window.scanProcessing = false;
     }
 
     initPage();

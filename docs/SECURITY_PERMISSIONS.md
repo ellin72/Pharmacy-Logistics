@@ -63,6 +63,31 @@ match /transactions/{transactionId} {
 | Action | Staff | Admin | Notes |
 |--------|-------|-------|-------|
 | **View/Read** | ✅ Yes | ✅ Yes | All users can see alerts |
+
+### 🔔 **Notification Preferences Collection**
+
+| Action | Staff | Admin | Notes |
+|--------|-------|-------|-------|
+| **View/Read** | ✅ Own only | ✅ All | Users can see their own preferences |
+| **Create** | ✅ Own only | ✅ All | Users can create their own preferences |
+| **Update** | ✅ Own only | ✅ All | Users can update their own preferences |
+| **Delete** | ✅ Own only | ✅ All | Users can delete their own preferences |
+
+**Security Rule:**
+```javascript
+match /notificationPreferences/{userId} {
+  allow read: if isAuthenticated() && 
+               (request.auth.uid == userId || isAdmin());
+  allow create: if isAuthenticated() && 
+                 request.auth.uid == userId;
+  allow update: if isAuthenticated() && 
+                 (request.auth.uid == userId || isAdmin());
+  allow delete: if isAuthenticated() && 
+                 (request.auth.uid == userId || isAdmin());
+}
+```
+
+---
 | **Create** | ✅ Yes | ✅ Yes | Alerts are created automatically by the system |
 | **Update/Resolve** | ✅ Yes | ✅ Yes | All users can resolve alerts |
 | **Delete** | ❌ No | ✅ Yes | Only admins can delete alerts |
