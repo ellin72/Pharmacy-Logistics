@@ -6,6 +6,40 @@
   <title>Dashboard - Pharmacy Logistics System</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Early error handler to suppress browser extension errors
+    (function() {
+      const suppressExtensionErrors = function(e) {
+        if (e && e.message && (
+          e.message.includes('message channel closed') ||
+          e.message.includes('listener indicated an asynchronous response') ||
+          e.message.includes('Extension context invalidated')
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          return true;
+        }
+        return false;
+      };
+      
+      window.addEventListener('error', function(e) {
+        if (suppressExtensionErrors(e)) return;
+      }, true);
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason) {
+          const msg = typeof e.reason === 'string' ? e.reason : 
+                     (e.reason.message || String(e.reason));
+          if (msg.includes('message channel closed') ||
+              msg.includes('listener indicated an asynchronous response') ||
+              msg.includes('Extension context invalidated')) {
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+    })();
+  </script>
 </head>
 <body>
   <div class="header">

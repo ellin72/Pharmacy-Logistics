@@ -7,6 +7,40 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Early error handler to suppress browser extension errors
+    (function() {
+      const suppressExtensionErrors = function(e) {
+        if (e && e.message && (
+          e.message.includes('message channel closed') ||
+          e.message.includes('listener indicated an asynchronous response') ||
+          e.message.includes('Extension context invalidated')
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          return true;
+        }
+        return false;
+      };
+      
+      window.addEventListener('error', function(e) {
+        if (suppressExtensionErrors(e)) return;
+      }, true);
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason) {
+          const msg = typeof e.reason === 'string' ? e.reason : 
+                     (e.reason.message || String(e.reason));
+          if (msg.includes('message channel closed') ||
+              msg.includes('listener indicated an asynchronous response') ||
+              msg.includes('Extension context invalidated')) {
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+    })();
+  </script>
   <style>
     .scanner-container {
       max-width: 600px;
@@ -355,40 +389,60 @@
       // Handle different data formats
       let parsedData;
       if (typeof data === 'string') {
-        // Try to parse as JSON first
-        try {
-          parsedData = JSON.parse(data);
-          console.log('Parsed as JSON:', parsedData);
-        } catch (e) {
-          // Not JSON, might be barcode or medicine ID
-          console.log('Not JSON, treating as text:', data);
-          
-          // Check if it's a medicine ID (Firestore ID format)
-          if (data.length === 20 && /^[a-zA-Z0-9]+$/.test(data)) {
-            // Could be a medicine ID
-            const medicine = allMedicines.find(m => m.id === data);
-            if (medicine) {
-              parsedData = { 
-                id: medicine.id, 
-                name: medicine.name, 
-                batch: medicine.batch, 
-                type: 'medicine' 
-              };
-            } else {
-              parsedData = { type: 'barcode', code: data };
-            }
+        // Prevent URL-based auto-navigation - if it looks like a URL, treat it as text
+        if (data.startsWith('http://') || data.startsWith('https://')) {
+          console.log('URL detected in scan, treating as text/code:', data);
+          // Try to extract medicine ID or batch from URL
+          const urlParts = data.split('/');
+          const lastPart = urlParts[urlParts.length - 1];
+          // Try to find medicine by ID or batch
+          const medicine = allMedicines.find(m => m.id === lastPart || m.batch === lastPart);
+          if (medicine) {
+            parsedData = { 
+              id: medicine.id, 
+              name: medicine.name, 
+              batch: medicine.batch, 
+              type: 'medicine' 
+            };
           } else {
-            // Try to find by batch number
-            const medicine = allMedicines.find(m => m.batch === data);
-            if (medicine) {
-              parsedData = { 
-                id: medicine.id, 
-                name: medicine.name, 
-                batch: medicine.batch, 
-                type: 'medicine' 
-              };
+            parsedData = { type: 'barcode', code: data };
+          }
+        } else {
+          // Try to parse as JSON first
+          try {
+            parsedData = JSON.parse(data);
+            console.log('Parsed as JSON:', parsedData);
+          } catch (e) {
+            // Not JSON, might be barcode or medicine ID
+            console.log('Not JSON, treating as text:', data);
+            
+            // Check if it's a medicine ID (Firestore ID format)
+            if (data.length === 20 && /^[a-zA-Z0-9]+$/.test(data)) {
+              // Could be a medicine ID
+              const medicine = allMedicines.find(m => m.id === data);
+              if (medicine) {
+                parsedData = { 
+                  id: medicine.id, 
+                  name: medicine.name, 
+                  batch: medicine.batch, 
+                  type: 'medicine' 
+                };
+              } else {
+                parsedData = { type: 'barcode', code: data };
+              }
             } else {
-              parsedData = { type: 'barcode', code: data };
+              // Try to find by batch number
+              const medicine = allMedicines.find(m => m.batch === data);
+              if (medicine) {
+                parsedData = { 
+                  id: medicine.id, 
+                  name: medicine.name, 
+                  batch: medicine.batch, 
+                  type: 'medicine' 
+                };
+              } else {
+                parsedData = { type: 'barcode', code: data };
+              }
             }
           }
         }
@@ -398,9 +452,18 @@
         console.warn('Unexpected data format:', data);
         parsedData = { type: 'unknown', raw: data };
       }
-
+      
+      // CRITICAL: Prevent any automatic navigation
+      // This ensures we stay on the scanner page regardless of what was scanned
       scannedData = parsedData;
       console.log('Final scanned data:', scannedData);
+      
+      // IMPORTANT: Stop any potential auto-navigation
+      // Clear any existing navigation timeouts
+      if (window.scanNavigationTimeout) {
+        clearTimeout(window.scanNavigationTimeout);
+        window.scanNavigationTimeout = null;
+      }
       
       // Display result
       if (scannedData && scannedData.type === 'medicine' && scannedData.id) {
@@ -423,10 +486,13 @@
           document.getElementById('scanActions').style.display = 'flex';
           showMessage('✅ Scan successful! Medicine found. Click Actions to manage.', 'success');
           
-          // Auto-show action modal after 1 second
+          // Auto-show action modal after 1 second (but don't redirect)
           setTimeout(() => {
             showMedicineActions();
           }, 1000);
+          
+          // Ensure we stay on the scanner page - don't auto-redirect
+          // The user can manually click "View Details" if they want to go to dashboard
         } else {
           // Medicine ID found but not in current inventory
           document.getElementById('scanResultContent').innerHTML = `
@@ -489,9 +555,10 @@
       }
     }
 
-    // Handle scan result button - navigate to dashboard
+    // Handle scan result button - navigate to dashboard (only when user clicks)
     function handleScanResult() {
       if (scannedData && scannedData.id) {
+        // Only redirect if user explicitly clicks the button
         window.location.href = `dashboard.html?highlight=${scannedData.id}`;
       }
     }

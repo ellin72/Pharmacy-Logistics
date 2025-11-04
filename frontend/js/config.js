@@ -23,3 +23,42 @@ const db = firebase.firestore();
 //   console.log('Persistence failed:', err);
 // });
 
+// Global error handler to suppress harmless browser extension errors
+window.addEventListener('error', (event) => {
+  // Suppress browser extension communication errors
+  if (event.message && (
+    event.message.includes('message channel closed') ||
+    event.message.includes('listener indicated an asynchronous response') ||
+    event.message.includes('Extension context invalidated')
+  )) {
+    event.preventDefault();
+    event.stopPropagation();
+    // Silently ignore - these are harmless browser extension errors
+    return false;
+  }
+});
+
+// Handle unhandled promise rejections (for async errors)
+window.addEventListener('unhandledrejection', (event) => {
+  // Suppress browser extension promise rejection errors
+  if (event.reason && typeof event.reason === 'object' && event.reason.message) {
+    const message = event.reason.message;
+    if (message.includes('message channel closed') ||
+        message.includes('listener indicated an asynchronous response') ||
+        message.includes('Extension context invalidated')) {
+      event.preventDefault();
+      // Silently ignore - these are harmless browser extension errors
+      return;
+    }
+  }
+  
+  // Also check if it's a string error
+  if (typeof event.reason === 'string') {
+    if (event.reason.includes('message channel closed') ||
+        event.reason.includes('listener indicated an asynchronous response')) {
+      event.preventDefault();
+      return;
+    }
+  }
+});
+
