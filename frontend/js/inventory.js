@@ -190,13 +190,53 @@ async function getAllMedicines() {
       .orderBy('updatedAt', 'desc')
       .get();
     
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      expiryDate: doc.data().expiryDate?.toDate() || null,
-      createdAt: doc.data().createdAt?.toDate() || null,
-      updatedAt: doc.data().updatedAt?.toDate() || null
-    }));
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      const expiryDate = data.expiryDate?.toDate() || null;
+      
+      // CRITICAL: Recalculate status based on current date (ensures expired items are detected)
+      let calculatedStatus = data.status || 'in_stock';
+      if (expiryDate) {
+        calculatedStatus = calculateMedicineStatus(
+          expiryDate,
+          data.quantity || 0,
+          data.minThreshold || 0
+        );
+        
+        // If status changed (especially to expired), update it in database
+        if (calculatedStatus !== data.status) {
+          // Update status asynchronously
+          doc.ref.update({
+            status: calculatedStatus,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).catch(err => {
+            console.error('Error updating medicine status:', err);
+          });
+          
+          // Check and create alerts for expired items
+          if (calculatedStatus === 'expired' || calculatedStatus === 'expiring_soon' || 
+              (calculatedStatus === 'low_stock' && data.quantity <= data.minThreshold)) {
+            checkAndCreateAlerts(doc.id, {
+              ...data,
+              expiryDate: expiryDate,
+              quantity: data.quantity || 0,
+              minThreshold: data.minThreshold || 0
+            }).catch(err => {
+              console.error('Error checking alerts:', err);
+            });
+          }
+        }
+      }
+      
+      return {
+        id: doc.id,
+        ...data,
+        status: calculatedStatus, // Use recalculated status
+        expiryDate: expiryDate,
+        createdAt: data.createdAt?.toDate() || null,
+        updatedAt: data.updatedAt?.toDate() || null
+      };
+    });
   } catch (error) {
     console.error('Error fetching medicines:', error);
     return [];
@@ -398,17 +438,59 @@ async function getLowStockMedicines() {
 function subscribeToMedicines(callback) {
   return db.collection('medicines')
     .orderBy('updatedAt', 'desc')
-    .onSnapshot((snapshot) => {
-      const medicines = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        expiryDate: doc.data().expiryDate?.toDate() || null,
-        createdAt: doc.data().createdAt?.toDate() || null,
-        updatedAt: doc.data().updatedAt?.toDate() || null
-      }));
+    .onSnapshot(async (snapshot) => {
+      const medicines = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const expiryDate = data.expiryDate?.toDate() || null;
+        
+        // CRITICAL: Recalculate status based on current date (ensures expired items are detected)
+        let calculatedStatus = data.status || 'in_stock';
+        if (expiryDate) {
+          calculatedStatus = calculateMedicineStatus(
+            expiryDate,
+            data.quantity || 0,
+            data.minThreshold || 0
+          );
+          
+          // If status changed (especially to expired), update it in database
+          if (calculatedStatus !== data.status) {
+            // Update status asynchronously (don't block the callback)
+            doc.ref.update({
+              status: calculatedStatus,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(err => {
+              console.error('Error updating medicine status:', err);
+            });
+            
+            // Also check and create alerts for expired items
+            if (calculatedStatus === 'expired' || calculatedStatus === 'expiring_soon' || 
+                (calculatedStatus === 'low_stock' && data.quantity <= data.minThreshold)) {
+              checkAndCreateAlerts(doc.id, {
+                ...data,
+                expiryDate: expiryDate,
+                quantity: data.quantity || 0,
+                minThreshold: data.minThreshold || 0
+              }).catch(err => {
+                console.error('Error checking alerts:', err);
+              });
+            }
+          }
+        }
+        
+        return {
+          id: doc.id,
+          ...data,
+          status: calculatedStatus, // Use recalculated status (ensures expired items show correctly)
+          expiryDate: expiryDate,
+          createdAt: data.createdAt?.toDate() || null,
+          updatedAt: data.updatedAt?.toDate() || null
+        };
+      });
+      
       callback(medicines);
     }, (error) => {
       console.error('Error in medicines subscription:', error);
+      callback([]);
     });
 }
 

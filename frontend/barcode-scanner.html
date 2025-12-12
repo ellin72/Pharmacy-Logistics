@@ -472,14 +472,20 @@
         
         if (medicine) {
           // Medicine found - show detailed info with actions
+          const isExpired = medicine.status === 'expired';
+          const bgColor = isExpired ? '#fee2e2' : 'var(--bg-secondary)';
+          const borderColor = isExpired ? '#dc2626' : 'transparent';
+          const expiryColor = isExpired ? '#dc2626' : 'inherit';
+          const expiryWeight = isExpired ? 'bold' : 'normal';
+          
           document.getElementById('scanResultContent').innerHTML = `
-            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
-              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+            <div style="background: ${bgColor}; border-left: 4px solid ${borderColor}; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; ${isExpired ? 'color: #7f1d1d;' : ''}">${escapeHtml(medicine.name)}</p>
               <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
               <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
               <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
-              <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
-              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+              <p><strong>Expiry Date:</strong> <span style="color: ${expiryColor}; font-weight: ${expiryWeight};">${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</span></p>
+              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status === 'expired' ? '🚨 EXPIRED' : medicine.status}</span></p>
             </div>
           `;
           document.getElementById('scanResult').style.display = 'block';
@@ -521,14 +527,20 @@
             type: 'medicine' 
           };
           // Show detailed medicine info
+          const isExpired = medicine.status === 'expired';
+          const bgColor = isExpired ? '#fee2e2' : 'var(--bg-secondary)';
+          const borderColor = isExpired ? '#dc2626' : 'transparent';
+          const expiryColor = isExpired ? '#dc2626' : 'inherit';
+          const expiryWeight = isExpired ? 'bold' : 'normal';
+          
           document.getElementById('scanResultContent').innerHTML = `
-            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
-              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+            <div style="background: ${bgColor}; border-left: 4px solid ${borderColor}; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+              <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; ${isExpired ? 'color: #7f1d1d;' : ''}">${escapeHtml(medicine.name)}</p>
               <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
               <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
               <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
-              <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
-              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+              <p><strong>Expiry Date:</strong> <span style="color: ${expiryColor}; font-weight: ${expiryWeight};">${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</span></p>
+              <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status === 'expired' ? '🚨 EXPIRED' : medicine.status}</span></p>
             </div>
           `;
           document.getElementById('scanResult').style.display = 'block';
@@ -626,14 +638,25 @@
           </div>
 
           <!-- Medicine Info -->
-          <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
-            <h3 style="margin: 0 0 0.5rem 0;">${escapeHtml(medicine.name)}</h3>
-            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
-            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Current Stock:</strong> <span style="font-size: 1.25rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span></p>
-            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
-            <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
-            <p style="margin: 0.25rem 0;"><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
-          </div>
+          ${(() => {
+            const isExpired = medicine.status === 'expired';
+            const bgColor = isExpired ? '#fee2e2' : 'var(--bg-secondary)';
+            const borderColor = isExpired ? '#dc2626' : 'transparent';
+            const expiryColor = isExpired ? '#dc2626' : 'var(--text-secondary)';
+            const expiryWeight = isExpired ? 'bold' : 'normal';
+            const nameColor = isExpired ? '#7f1d1d' : 'inherit';
+            
+            return `
+            <div style="background: ${bgColor}; border-left: 4px solid ${borderColor}; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
+              <h3 style="margin: 0 0 0.5rem 0; color: ${nameColor};">${escapeHtml(medicine.name)} ${isExpired ? '🚨' : ''}</h3>
+              <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
+              <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Current Stock:</strong> <span style="font-size: 1.25rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span></p>
+              <p style="margin: 0.25rem 0; color: var(--text-secondary);"><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
+              <p style="margin: 0.25rem 0;"><strong>Expiry Date:</strong> <span style="color: ${expiryColor}; font-weight: ${expiryWeight};">${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</span></p>
+              <p style="margin: 0.25rem 0;"><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status === 'expired' ? '🚨 EXPIRED' : medicine.status}</span></p>
+            </div>
+            `;
+          })()}
 
           <!-- Quick Actions -->
           <div style="display: grid; gap: 0.75rem;">
@@ -793,14 +816,20 @@
       
       const medicine = allMedicines.find(m => m.id === scannedData.id);
       if (medicine) {
+        const isExpired = medicine.status === 'expired';
+        const bgColor = isExpired ? '#fee2e2' : 'var(--bg-secondary)';
+        const borderColor = isExpired ? '#dc2626' : 'transparent';
+        const expiryColor = isExpired ? '#dc2626' : 'inherit';
+        const expiryWeight = isExpired ? 'bold' : 'normal';
+        
         document.getElementById('scanResultContent').innerHTML = `
-          <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
-            <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(medicine.name)}</p>
+          <div style="background: ${bgColor}; border-left: 4px solid ${borderColor}; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;">
+            <p style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; ${isExpired ? 'color: #7f1d1d;' : ''}">${escapeHtml(medicine.name)}</p>
             <p><strong>Batch:</strong> ${escapeHtml(medicine.batch)}</p>
             <p><strong>Current Stock:</strong> <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${medicine.quantity}</span> units</p>
             <p><strong>Min Threshold:</strong> ${medicine.minThreshold}</p>
-            <p><strong>Expiry Date:</strong> ${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status}</span></p>
+            <p><strong>Expiry Date:</strong> <span style="color: ${expiryColor}; font-weight: ${expiryWeight};">${medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'N/A'}</span></p>
+            <p><strong>Status:</strong> <span class="badge badge-${medicine.status === 'in_stock' ? 'success' : medicine.status === 'low_stock' ? 'low-stock' : medicine.status === 'expired' ? 'expired' : 'expiring-soon'}">${medicine.status === 'expired' ? '🚨 EXPIRED' : medicine.status}</span></p>
           </div>
         `;
       }

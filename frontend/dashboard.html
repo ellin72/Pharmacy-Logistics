@@ -66,7 +66,8 @@
       </div>
       <div class="flex gap-2">
         <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">📋 Order List</a>
-        <a href="add-medicine.html" class="btn btn-primary">+ Add Medicine</a>
+        <a href="add-stock.html" class="btn btn-primary">📦 Add Stock</a>
+        <a href="add-medicine.html" class="btn btn-secondary">+ Add Medicine</a>
       </div>
     </div>
 
@@ -101,6 +102,7 @@
         <a href="transactions.html" class="btn btn-secondary">📊 Transaction History</a>
         <a href="bulk-operations.html" class="btn btn-secondary">⚡ Bulk Operations</a>
         <a href="barcode-scanner.html" class="btn btn-secondary">📷 Scanner</a>
+        <a href="seed-medicines.html" id="seedMedicinesLink" class="btn btn-secondary" style="display: none;">🌱 Seed Medicines</a>
         <button onclick="exportInventory()" class="btn btn-secondary">📥 Export</button>
         <button onclick="printInventory()" class="btn btn-secondary">🖨️ Print</button>
       </div>
@@ -257,13 +259,17 @@
           `<button onclick="handleDeleteMedicine('${med.id}', '${escapeHtml(med.name)}')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;">Delete</button>` : 
           '';
         
+        const isExpired = med.status === 'expired';
+        const rowClass = isExpired ? 'expired-row' : '';
+        const expiryDateClass = isExpired ? 'expired-date' : '';
+        
         return `
-        <tr>
+        <tr class="${rowClass}">
           <td><strong>${highlightMatch(med.name, searchTerm)}</strong></td>
           <td>${highlightMatch(med.batch, searchTerm)}</td>
           <td>${med.quantity}</td>
           <td>${med.minThreshold}</td>
-          <td>${formatDate(med.expiryDate)}</td>
+          <td class="${expiryDateClass}">${formatDate(med.expiryDate)}</td>
           <td><span class="badge ${getStatusBadge(med.status)}">${getStatusLabel(med.status)}</span></td>
           <td>
             <a href="adjust-stock.html?id=${med.id}" class="btn btn-sm btn-secondary">Adjust Stock</a>
@@ -322,6 +328,9 @@
         resultsInfo.style.display = 'none';
       }
 
+      // Filter out medicines with quantity = 0 (only show medicines in stock)
+      filtered = filtered.filter(med => (med.quantity || 0) > 0);
+
       // Apply status filter
       if (currentFilter !== 'all') {
         filtered = filtered.filter(med => med.status === currentFilter);
@@ -342,8 +351,8 @@
           resultsInfo.innerHTML = `
             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
               <span style="color: var(--warning-color);">No results found for "${searchValue}"</span>
-              <a href="add-medicine.html?search=${encodeURIComponent(searchInput.value)}" class="btn btn-sm btn-primary">
-                ➕ Add "${searchValue}" as New Medicine
+              <a href="add-stock.html" class="btn btn-sm btn-primary">
+                ➕ Add Stock for "${searchValue}"
               </a>
             </div>
           `;
@@ -448,6 +457,13 @@
         lowStockCountEl.textContent = lowStockCount;
       }
       
+      // Update expired count (ensure it's visible)
+      const expiredCount = medicines.filter(m => m.status === 'expired').length;
+      const expiredCountEl = document.getElementById('expiredCount');
+      if (expiredCountEl) {
+        expiredCountEl.textContent = expiredCount;
+      }
+      
       // Update stats badges
       const totalMedicinesEl = document.getElementById('totalMedicines');
       const totalStockEl = document.getElementById('totalStock');
@@ -460,6 +476,12 @@
       if (expiringSoonEl) expiringSoonEl.textContent = medicines.filter(m => 
         m.status === 'expiring_soon'
       ).length;
+      
+      // Log expired items for debugging
+      if (expiredCount > 0) {
+        console.log(`Found ${expiredCount} expired item(s):`, 
+          medicines.filter(m => m.status === 'expired').map(m => `${m.name} (${m.batch})`));
+      }
     }
 
     // Export inventory
@@ -472,6 +494,50 @@
       const medicines = filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
       generateInventoryPDF(medicines);
     }
+    
+    // Set print header and footer (for direct page printing)
+    function setupPrintBranding() {
+      const currentDate = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      // Create print header if it doesn't exist
+      let header = document.getElementById('print-header');
+      if (!header) {
+        header = document.createElement('div');
+        header.id = 'print-header';
+        header.className = 'print-header hide-on-print';
+        header.textContent = 'EHAFO CLINIC';
+        document.body.insertBefore(header, document.body.firstChild);
+      }
+      
+      // Create print stamp footer if it doesn't exist
+      let footer = document.getElementById('print-stamp-footer');
+      if (!footer) {
+        footer = document.createElement('div');
+        footer.id = 'print-stamp-footer';
+        footer.className = 'print-stamp-footer hide-on-print';
+        footer.innerHTML = `
+          <div class="ministry-name">Ministry of Health and Social Services</div>
+          <div>P O Box 547, Windhoek</div>
+          <div>Oshana Region, Oshakati District</div>
+          <div style="font-weight: bold; margin-top: 5px;">Ehafo Clinic</div>
+          <div class="stamp-date">${currentDate}</div>
+        `;
+        document.body.appendChild(footer);
+      } else {
+        // Update date if footer exists
+        const dateEl = footer.querySelector('.stamp-date');
+        if (dateEl) {
+          dateEl.textContent = currentDate;
+        }
+      }
+    }
+    
+    // Call on page load
+    setupPrintBranding();
 
     // Escape HTML to prevent XSS
     function escapeHtml(text) {
@@ -505,6 +571,14 @@
       
       // Store role for use in UI
       window.currentUserRole = userRole;
+
+      // Show admin-only features
+      if (userRole === 'admin') {
+        const seedLink = document.getElementById('seedMedicinesLink');
+        if (seedLink) {
+          seedLink.style.display = 'inline-block';
+        }
+      }
 
       // Set up filter buttons
       document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -550,8 +624,10 @@
       // Subscribe to medicines (real-time updates)
       medicinesUnsubscribe = subscribeToMedicines((medicines) => {
         allMedicines = medicines;
+        // Filter to only medicines with stock for stats
+        const medicinesWithStock = medicines.filter(m => (m.quantity || 0) > 0);
         filterMedicines();
-        updateDashboardStats(medicines);
+        updateDashboardStats(medicinesWithStock);
       });
 
       // Subscribe to alerts (real-time updates)

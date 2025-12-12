@@ -34,8 +34,8 @@
         <span id="orderCount" class="badge badge-low-stock">0 items</span>
       </div>
       <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-        This list automatically includes all medicines with stock below their minimum threshold. 
-        Order these items to maintain adequate inventory levels.
+        This list automatically includes all medicines with stock below their minimum threshold <strong>and expired medicines</strong>. 
+        Order these items to maintain adequate inventory levels and replace expired stock.
       </p>
       
       <div id="orderListContainer">
@@ -96,8 +96,11 @@
       const container = document.getElementById('orderListContainer');
       const countEl = document.getElementById('orderCount');
       
+      // Include low stock AND expired items in order list
       lowStockMedicines = medicines.filter(med => 
-        med.status === 'low_stock' || med.quantity <= med.minThreshold
+        med.status === 'low_stock' || 
+        med.status === 'expired' ||
+        med.quantity <= med.minThreshold
       );
       
       countEl.textContent = `${lowStockMedicines.length} item${lowStockMedicines.length !== 1 ? 's' : ''}`;
@@ -114,10 +117,15 @@
         return;
       }
 
-      // Sort by urgency (lowest stock first)
+      // Sort by urgency: expired first, then by stock ratio
       lowStockMedicines.sort((a, b) => {
-        const aRatio = a.quantity / a.minThreshold;
-        const bRatio = b.quantity / b.minThreshold;
+        // Expired items always come first
+        if (a.status === 'expired' && b.status !== 'expired') return -1;
+        if (a.status !== 'expired' && b.status === 'expired') return 1;
+        
+        // If both expired or both not expired, sort by stock ratio
+        const aRatio = a.minThreshold > 0 ? a.quantity / a.minThreshold : 0;
+        const bRatio = b.minThreshold > 0 ? b.quantity / b.minThreshold : 0;
         return aRatio - bRatio;
       });
 
@@ -129,7 +137,8 @@
               <th>Batch Number</th>
               <th>Current Stock</th>
               <th>Min Threshold</th>
-              <th>Shortage</th>
+              <th>Expiry Date</th>
+              <th>Shortage/Status</th>
               <th>Recommended Order</th>
               <th>Priority</th>
               <th>Actions</th>
@@ -137,14 +146,21 @@
           </thead>
           <tbody>
             ${lowStockMedicines.map(med => {
+              const isExpired = med.status === 'expired';
               const shortage = med.minThreshold - med.quantity;
-              const recommendedOrder = calculateQuantityNeeded(med);
-              const stockRatio = med.quantity / med.minThreshold;
+              const recommendedOrder = isExpired ? med.minThreshold * 2 : calculateQuantityNeeded(med);
+              const stockRatio = med.minThreshold > 0 ? med.quantity / med.minThreshold : 0;
               
-              // Priority: Critical (< 25%), High (< 50%), Medium (< 75%)
+              // Priority: Expired (highest), Critical (< 25%), High (< 50%), Medium (< 75%)
               let priority = 'Medium';
               let priorityClass = 'badge-low-stock';
-              if (stockRatio < 0.25) {
+              let rowClass = '';
+              
+              if (isExpired) {
+                priority = '🚨 EXPIRED';
+                priorityClass = 'badge-expired';
+                rowClass = 'expired-row';
+              } else if (stockRatio < 0.25) {
                 priority = 'Critical';
                 priorityClass = 'badge-expired';
               } else if (stockRatio < 0.5) {
@@ -153,12 +169,13 @@
               }
 
               return `
-                <tr>
-                  <td><strong>${escapeHtml(med.name)}</strong></td>
+                <tr class="${rowClass}">
+                  <td><strong>${escapeHtml(med.name)} ${isExpired ? '🚨' : ''}</strong></td>
                   <td>${escapeHtml(med.batch)}</td>
-                  <td><span style="color: ${med.quantity === 0 ? 'var(--danger-color)' : 'var(--warning-color)'}; font-weight: bold;">${med.quantity}</span></td>
+                  <td><span style="color: ${isExpired ? '#dc2626' : (med.quantity === 0 ? 'var(--danger-color)' : 'var(--warning-color)')}; font-weight: bold;">${med.quantity}</span></td>
                   <td>${med.minThreshold}</td>
-                  <td><span style="color: var(--danger-color); font-weight: bold;">-${shortage}</span></td>
+                  <td class="${isExpired ? 'expired-date' : ''}">${formatDate(med.expiryDate)}</td>
+                  <td><span style="color: var(--danger-color); font-weight: bold;">${isExpired ? 'EXPIRED' : '-' + shortage}</span></td>
                   <td><strong>${recommendedOrder}</strong> units</td>
                   <td><span class="badge ${priorityClass}">${priority}</span></td>
                   <td>
@@ -188,20 +205,29 @@
       summaryCard.style.display = 'block';
 
       const totalItems = lowStockMedicines.length;
-      const criticalItems = lowStockMedicines.filter(m => (m.quantity / m.minThreshold) < 0.25).length;
+      const expiredItems = lowStockMedicines.filter(m => m.status === 'expired').length;
+      const criticalItems = lowStockMedicines.filter(m => 
+        m.status !== 'expired' && m.minThreshold > 0 && (m.quantity / m.minThreshold) < 0.25
+      ).length;
       const highPriorityItems = lowStockMedicines.filter(m => {
+        if (m.status === 'expired' || m.minThreshold === 0) return false;
         const ratio = m.quantity / m.minThreshold;
         return ratio >= 0.25 && ratio < 0.5;
       }).length;
-      const totalOrderQuantity = lowStockMedicines.reduce((sum, med) => 
-        sum + calculateQuantityNeeded(med), 0
-      );
+      const totalOrderQuantity = lowStockMedicines.reduce((sum, med) => {
+        const qty = med.status === 'expired' ? med.minThreshold * 2 : calculateQuantityNeeded(med);
+        return sum + qty;
+      }, 0);
 
       summaryContainer.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
           <div>
             <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Items</strong>
             <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${totalItems}</div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem;">🚨 Expired Items</strong>
+            <div style="font-size: 2rem; font-weight: bold; color: #dc2626;">${expiredItems}</div>
           </div>
           <div>
             <strong style="color: var(--text-secondary); font-size: 0.875rem;">Critical Priority</strong>
@@ -306,21 +332,25 @@
       }
 
       // Create CSV content
-      let csv = 'Medicine Name,Batch Number,Current Stock,Min Threshold,Shortage,Recommended Order,Priority\n';
+      let csv = 'Medicine Name,Batch Number,Current Stock,Min Threshold,Expiry Date,Shortage/Status,Recommended Order,Priority\n';
       
       lowStockMedicines.forEach(med => {
+        const isExpired = med.status === 'expired';
         const shortage = med.minThreshold - med.quantity;
-        const recommendedOrder = calculateQuantityNeeded(med);
-        const stockRatio = med.quantity / med.minThreshold;
+        const recommendedOrder = isExpired ? med.minThreshold * 2 : calculateQuantityNeeded(med);
+        const stockRatio = med.minThreshold > 0 ? med.quantity / med.minThreshold : 0;
         
         let priority = 'Medium';
-        if (stockRatio < 0.25) {
+        if (isExpired) {
+          priority = 'EXPIRED';
+        } else if (stockRatio < 0.25) {
           priority = 'Critical';
         } else if (stockRatio < 0.5) {
           priority = 'High';
         }
 
-        csv += `"${med.name}","${med.batch}",${med.quantity},${med.minThreshold},${shortage},${recommendedOrder},"${priority}"\n`;
+        const expiryDateStr = med.expiryDate ? formatDate(med.expiryDate) : 'N/A';
+        csv += `"${med.name}","${med.batch}",${med.quantity},${med.minThreshold},"${expiryDateStr}","${isExpired ? 'EXPIRED' : '-' + shortage}",${recommendedOrder},"${priority}"\n`;
       });
 
       // Create and download file

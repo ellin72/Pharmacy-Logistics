@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Stock - Pharmacy Logistics System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">Add Stock</h1>
+      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Add Stock to Medicine</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+          Select a medicine from your inventory and add stock. If the medicine doesn't exist, it will be created automatically.
+        </p>
+      </div>
+
+      <form id="addStockForm">
+        <div class="form-group">
+          <label for="medicineName" class="form-label">Medicine Name *</label>
+          <input 
+            type="text" 
+            id="medicineName" 
+            class="form-input" 
+            required 
+            list="medicineList"
+            placeholder="Type to search or select from list..."
+            autocomplete="off"
+          >
+          <datalist id="medicineList"></datalist>
+          <small style="color: var(--text-secondary); font-size: 0.75rem;">
+            Start typing to search. If medicine doesn't exist, enter the full name and it will be created.
+          </small>
+          <div class="form-error hidden" id="medicineNameError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="batch" class="form-label">Batch Number *</label>
+          <input type="text" id="batch" class="form-input" required placeholder="e.g., BATCH-2024-001">
+          <div class="form-error hidden" id="batchError"></div>
+        </div>
+
+        <div class="flex gap-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="expiryDate" class="form-label">Expiry Date *</label>
+            <input type="date" id="expiryDate" class="form-input" required>
+            <div class="form-error hidden" id="expiryDateError"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="quantity" class="form-label">Quantity to Add *</label>
+            <input type="number" id="quantity" class="form-input" required min="1" step="1" placeholder="0">
+            <div class="form-error hidden" id="quantityError"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="minThreshold" class="form-label">Minimum Threshold *</label>
+            <input type="number" id="minThreshold" class="form-input" required min="0" step="1" placeholder="0">
+            <small style="color: var(--text-secondary); font-size: 0.75rem;">Alert when stock falls below this</small>
+            <div class="form-error hidden" id="minThresholdError"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="notes" class="form-label">Notes (Optional)</label>
+            <textarea id="notes" class="form-textarea" placeholder="Any additional information..."></textarea>
+          </div>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">Add Stock</button>
+          <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/inventory.js"></script>
+  
+  <script>
+    let allMedicines = [];
+
+    // Load all medicines for autocomplete
+    async function loadMedicines() {
+      try {
+        allMedicines = await getAllMedicines();
+        const medicineList = document.getElementById('medicineList');
+        
+        // Get unique medicine names (case-insensitive)
+        const uniqueNames = [...new Set(allMedicines.map(m => m.name.trim()))].sort();
+        
+        medicineList.innerHTML = uniqueNames.map(name => 
+          `<option value="${escapeHtml(name)}">`
+        ).join('');
+      } catch (error) {
+        console.error('Error loading medicines:', error);
+      }
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Show message
+    function showMessage(message, type = 'info') {
+      const container = document.getElementById('messageContainer');
+      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    // Show error
+    function showError(fieldId, message) {
+      const errorEl = document.getElementById(fieldId + 'Error');
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    // Clear errors
+    function clearErrors() {
+      document.querySelectorAll('.form-error').forEach(el => {
+        el.classList.add('hidden');
+        el.textContent = '';
+      });
+    }
+
+    // Form submission
+    document.getElementById('addStockForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const medicineName = document.getElementById('medicineName').value.trim();
+      const batch = document.getElementById('batch').value.trim();
+      const expiryDate = document.getElementById('expiryDate').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const minThreshold = parseInt(document.getElementById('minThreshold').value);
+      const notes = document.getElementById('notes').value.trim();
+
+      // Validation
+      if (!medicineName) {
+        showError('medicineName', 'Please enter a medicine name');
+        return;
+      }
+
+      if (!batch) {
+        showError('batch', 'Please enter a batch number');
+        return;
+      }
+
+      if (!expiryDate) {
+        showError('expiryDate', 'Please select an expiry date');
+        return;
+      }
+
+      if (isNaN(quantity) || quantity <= 0) {
+        showError('quantity', 'Please enter a valid quantity (greater than 0)');
+        return;
+      }
+
+      if (isNaN(minThreshold) || minThreshold < 0) {
+        showError('minThreshold', 'Please enter a valid minimum threshold (0 or greater)');
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding Stock...';
+
+      try {
+        // Check if medicine with same name and batch exists
+        const existingMedicine = await findDuplicateMedicine(medicineName, batch);
+        
+        if (existingMedicine) {
+          // Add stock to existing medicine
+          const result = await updateStock(existingMedicine.id, 'add', quantity, `Stock added via Add Stock page`);
+          
+          if (result.success) {
+            showMessage(`Stock added successfully! ${quantity} units added to "${medicineName}" (Batch: ${batch}). New total: ${result.newQuantity}`, 'success');
+            setTimeout(() => {
+              window.location.href = 'dashboard.html';
+            }, 2000);
+          } else {
+            showMessage('Error: ' + result.error, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Stock';
+          }
+        } else {
+          // Create new medicine with the stock
+          const medicineData = {
+            name: medicineName,
+            batch: batch,
+            expiryDate: expiryDate,
+            quantity: quantity,
+            minThreshold: minThreshold,
+            notes: notes
+          };
+
+          const result = await addMedicine(medicineData);
+          
+          if (result.success) {
+            showMessage(`Medicine "${medicineName}" created and ${quantity} units added successfully!`, 'success');
+            setTimeout(() => {
+              window.location.href = 'dashboard.html';
+            }, 2000);
+          } else {
+            showMessage('Error: ' + result.error, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Stock';
+          }
+        }
+      } catch (error) {
+        console.error('Error adding stock:', error);
+        showMessage('Error: ' + (error.message || 'Failed to add stock. Please try again.'), 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Stock';
+      }
+    });
+
+    // Initialize page
+    async function initPage() {
+      // Wait for auth state to be determined
+      const user = await new Promise((resolve) => {
+        if (auth && auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          auth.onAuthStateChanged((user) => {
+            resolve(user);
+          });
+        }
+      });
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      document.getElementById('userEmail').textContent = user.email;
+      await loadMedicines();
+
+      // Set minimum date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('expiryDate').setAttribute('min', today);
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

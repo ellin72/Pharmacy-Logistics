@@ -380,8 +380,35 @@ body {
 }
 
 .badge-expired {
-  background: #fee2e2;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Expired row highlighting */
+.table tr.expired-row {
+  background: #fee2e2 !important;
+  border-left: 4px solid #dc2626;
+}
+
+.table tr.expired-row:hover {
+  background: #fecaca !important;
+}
+
+.table tr.expired-row td {
   color: #991b1b;
+  font-weight: 500;
+}
+
+.table tr.expired-row td:first-child {
+  font-weight: 700;
+  color: #7f1d1d;
+}
+
+/* Expired expiry date */
+.expired-date {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
 }
 
 /* Alerts Panel */
@@ -665,6 +692,56 @@ body {
   .card {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* Print Branding Header - EHAFO CLINIC as first heading */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: #2563eb;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #2563eb;
+    letter-spacing: 4px;
+  }
+
+  /* Print Branding Footer - Ministry Stamp in Rectangle */
+  .print-stamp-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 10px;
+    color: #333;
+    line-height: 1.6;
+    width: 80%;
+    max-width: 500px;
+    border: 2px solid #2563eb;
+    padding: 15px;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .print-stamp-footer .ministry-name {
+    font-weight: bold;
+    font-size: 11px;
+    margin-bottom: 5px;
+    color: #2563eb;
+  }
+  
+  .print-stamp-footer .stamp-date {
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+  }
+
+  @page {
+    margin: 2cm 1cm 3cm 1cm;
   }
 }
 

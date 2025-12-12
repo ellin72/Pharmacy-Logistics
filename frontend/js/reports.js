@@ -63,26 +63,43 @@ function downloadCSV(csvContent, filename) {
 
 // Generate PDF report (simple HTML-to-PDF)
 function generatePDFReport(title, content, filename = 'report') {
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${title}</title>
+      <title>${title} - Ehafo Clinic</title>
       <style>
         @media print {
-          @page { margin: 1cm; }
-          body { font-family: Arial, sans-serif; }
+          @page { 
+            margin: 2cm 1cm 3cm 1cm;
+          }
+          body { 
+            font-family: Arial, sans-serif;
+            position: relative;
+          }
         }
         body {
           font-family: Arial, sans-serif;
           padding: 20px;
+          position: relative;
         }
-        h1 { color: #2563eb; }
+        
+        h1 { 
+          color: #2563eb;
+          margin-top: 0;
+        }
         table {
           width: 100%;
           border-collapse: collapse;
           margin-top: 20px;
+          margin-bottom: 60px;
         }
         th, td {
           border: 1px solid #ddd;
@@ -100,14 +117,65 @@ function generatePDFReport(title, content, filename = 'report') {
           color: #6b7280;
           font-size: 0.875rem;
         }
+        /* Print Header - EHAFO CLINIC */
+        .print-header {
+          text-align: center;
+          font-size: 32px;
+          font-weight: bold;
+          color: #2563eb;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 3px solid #2563eb;
+          letter-spacing: 4px;
+        }
+        
+        /* Print Stamp Footer - Ministry Stamp in Rectangle */
+        .print-stamp-footer {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          text-align: center;
+          font-size: 10px;
+          color: #333;
+          line-height: 1.6;
+          width: 80%;
+          max-width: 500px;
+          border: 2px solid #2563eb;
+          padding: 15px;
+          background: #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .print-stamp-footer .ministry-name {
+          font-weight: bold;
+          font-size: 11px;
+          margin-bottom: 5px;
+          color: #2563eb;
+        }
+        
+        .print-stamp-footer .stamp-date {
+          font-weight: bold;
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #ddd;
+        }
       </style>
     </head>
     <body>
+      <div class="print-header">EHAFO CLINIC</div>
       <div class="header">
         <h1>${title}</h1>
         <p class="date">Generated: ${new Date().toLocaleString()}</p>
       </div>
       ${content}
+      <div class="print-stamp-footer">
+        <div class="ministry-name">Ministry of Health and Social Services</div>
+        <div>P O Box 547, Windhoek</div>
+        <div>Oshana Region, Oshakati District</div>
+        <div style="font-weight: bold; margin-top: 5px;">Ehafo Clinic</div>
+        <div class="stamp-date">${currentDate}</div>
+      </div>
     </body>
     </html>
   `);
