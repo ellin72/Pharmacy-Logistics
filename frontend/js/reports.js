@@ -137,28 +137,34 @@ function generatePDFReport(title, content, filename = 'report') {
           transform: translateX(-50%);
           text-align: center;
           font-size: 10px;
-          color: #333;
+          color: #9333ea; /* Purple text */
           line-height: 1.6;
           width: 80%;
           max-width: 500px;
-          border: 2px solid #2563eb;
+          border: 2px solid #9333ea; /* Purple border */
           padding: 15px;
-          background: #ffffff;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          background: transparent; /* Transparent background */
+          box-shadow: none; /* Remove shadow */
         }
         
         .print-stamp-footer .ministry-name {
           font-weight: bold;
           font-size: 11px;
           margin-bottom: 5px;
-          color: #2563eb;
+          color: #9333ea; /* Purple text */
         }
         
         .print-stamp-footer .stamp-date {
           font-weight: bold;
           margin-top: 8px;
           padding-top: 8px;
-          border-top: 1px solid #ddd;
+          border-top: 1px solid #9333ea; /* Purple border */
+          color: #9333ea; /* Purple text */
+        }
+        
+        /* Ensure all text in stamp footer is purple */
+        .print-stamp-footer > div {
+          color: #9333ea !important;
         }
       </style>
     </head>
