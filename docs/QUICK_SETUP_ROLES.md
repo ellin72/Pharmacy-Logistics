@@ -1,13 +1,13 @@
 # Quick Setup: Role-Based Security Rules
 
-This is a condensed version for quick reference. For detailed explanations, see `ROLE_BASED_SECURITY_SETUP.md`.
+Quick reference guide for setting up role-based security in the Pharmacy Logistics System.
 
 ## 🚀 Quick Steps
 
 ### 1. Copy Firestore Rules
 
 1. Go to Firebase Console → Firestore Database → **Rules** tab
-2. Copy the rules from `docs/FIRESTORE_RULES_COMPLETE.rules`
+2. Copy the rules from `docs/FIRESTORE_RULES_FINAL.rules`
 3. Paste and click **"Publish"**
 
 ### 2. Code Already Updated ✅
@@ -61,5 +61,5 @@ Your role-based security is now active. All new users will automatically get `"s
 
 ---
 
-**Need help?** See `docs/ROLE_BASED_SECURITY_SETUP.md` for detailed explanations.
+**Need help?** See `docs/SECURITY_PERMISSIONS.md` for detailed security documentation.
 

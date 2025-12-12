@@ -64,7 +64,7 @@ If errors persist:
 - User doesn't have admin role when trying to delete
 
 **Solution:**
-1. Set up Firestore security rules (see `docs/ROLE_BASED_SECURITY_SETUP.md`)
+1. Set up Firestore security rules (see `docs/QUICK_SETUP_ROLES.md` or `docs/SECURITY_PERMISSIONS.md`)
 2. For deletion errors: Check user role in Firestore `users` collection
 3. For user document creation: Make sure security rules allow authenticated users to create their own document
 
@@ -110,10 +110,73 @@ If errors persist:
 **Solution:**
 1. Alerts are created when:
    - Medicine expires (expiry date passed)
-   - Medicine expiring soon (within 3 months)
+   - Medicine expiring soon (within 3 months / 90 days)
    - Stock below minimum threshold
 2. Try adding a medicine with expiry date within 3 months to test
 3. Try setting stock below threshold to test low stock alert
+
+---
+
+### Password Change Issues
+
+**Symptoms:** 
+- Can't change password
+- "Current password is incorrect" error
+- Password change notification keeps appearing
+
+**Cause:**
+- Wrong current password entered
+- Password requirements not met
+- User document not updated after password change
+
+**Solution:**
+1. **Wrong current password:**
+   - Make sure you're entering the exact current password
+   - Try logging out and back in if you're unsure
+   - Use "Forgot Password" if you don't remember your current password
+
+2. **Password requirements:**
+   - New password must be at least 6 characters
+   - New password must be different from current password
+   - Confirmation password must match new password
+
+3. **Notification keeps appearing:**
+   - Make sure password change completed successfully
+   - Check browser console for errors
+   - Refresh the page after changing password
+   - If issue persists, check Firestore `users` collection - `passwordChanged` should be `true`
+
+4. **"Requires recent login" error:**
+   - Log out and log back in
+   - Then try changing password again
+
+---
+
+### Offline/Export/Print Issues
+
+**Symptoms:**
+- Can't use system offline
+- Export button doesn't work
+- Print doesn't show correctly
+
+**Solution:**
+1. **Offline functionality:**
+   - System works offline as PWA (Progressive Web App)
+   - First visit must be online to cache resources
+   - Install the app (Add to Home Screen) for better offline support
+   - Operations queue when offline and sync when online
+
+2. **Export issues:**
+   - Click the 📥 Export button on dashboard or transactions page
+   - CSV file should download automatically
+   - If blocked, check browser download settings
+   - Some browsers require permission for downloads
+
+3. **Print issues:**
+   - Click the 🖨️ Print button or use Ctrl+P / Cmd+P
+   - Check print preview shows clinic branding
+   - Ensure print styles are loading (check browser console)
+   - Try different browser if print layout is incorrect
 
 ---
 
@@ -140,7 +203,8 @@ If you encounter an issue not listed here:
    - Authentication is enabled
 
 4. **Review documentation:**
-   - `docs/ROLE_BASED_SECURITY_SETUP.md` - Security setup
+   - `docs/QUICK_SETUP_ROLES.md` - Quick security setup
+   - `docs/SECURITY_PERMISSIONS.md` - Detailed security documentation
    - `docs/DEPLOYMENT.md` - Deployment issues
    - `SETUP.md` - Initial setup
 
@@ -181,4 +245,31 @@ When something isn't working:
 - [ ] User document exists in Firestore `users` collection (for role-based access)
 - [ ] Browser console shows no errors
 - [ ] Hard refresh browser (Ctrl+F5)
+- [ ] Check internet connection (for online features)
+- [ ] Service worker registered (for offline support - check Application tab in DevTools)
+- [ ] Password changed if first login (check `passwordChanged` field in user document)
+
+---
+
+## Feature-Specific Troubleshooting
+
+### Password Change
+- **First login notification:** Normal - change password to dismiss
+- **Can't change password:** Verify current password is correct
+- **Notification won't dismiss:** Check `passwordChanged` field in Firestore
+
+### Offline Support
+- **Not working offline:** First visit must be online to cache resources
+- **Operations not syncing:** Check internet connection, operations queue automatically
+- **Service worker errors:** Clear browser cache and reload
+
+### Export/Print
+- **Export not downloading:** Check browser download permissions
+- **Print layout wrong:** Check print styles are loading
+- **CSV format issues:** Open in Excel or Google Sheets
+
+---
+
+**Last Updated:** 2024  
+**Version:** 2.0
 

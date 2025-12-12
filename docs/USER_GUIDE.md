@@ -6,12 +6,14 @@ Welcome to the Pharmacy Logistics System for Ehafo Clinic. This guide will help 
 
 1. [Getting Started](#getting-started)
 2. [Logging In](#logging-in)
-3. [Dashboard Overview](#dashboard-overview)
-4. [Adding Medicines](#adding-medicines)
-5. [Adjusting Stock](#adjusting-stock)
-6. [Understanding Alerts](#understanding-alerts)
-7. [Filtering Inventory](#filtering-inventory)
-8. [Frequently Asked Questions](#frequently-asked-questions)
+3. [Changing Your Password](#changing-your-password)
+4. [Dashboard Overview](#dashboard-overview)
+5. [Adding Medicines](#adding-medicines)
+6. [Adding Stock](#adding-stock)
+7. [Adjusting Stock](#adjusting-stock)
+8. [Understanding Alerts](#understanding-alerts)
+9. [Filtering Inventory](#filtering-inventory)
+10. [Frequently Asked Questions](#frequently-asked-questions)
 
 ---
 
@@ -41,12 +43,46 @@ Welcome to the Pharmacy Logistics System for Ehafo Clinic. This guide will help 
 
 3. **First time login?**
    - Contact your administrator to create your account
-   - You may need to reset your password on first login
+   - You will see a security notification prompting you to change your password
+   - **Important**: Change your default password immediately for security
 
 4. **Forgot password?**
    - Click "Forgot Password"
    - Enter your email
    - Check your inbox for reset instructions
+
+---
+
+## Changing Your Password
+
+### First Login Password Change
+
+When you log in for the first time, you'll see a security notification at the top of the dashboard prompting you to change your password. This is required for security purposes.
+
+**To change your password on first login:**
+1. Click the **"Change Password"** button in the notification banner
+2. Or click the 🔑 icon in the top right menu
+3. Enter your current password
+4. Enter your new password (minimum 6 characters)
+5. Confirm your new password
+6. Click "Change Password"
+
+### Changing Password Later
+
+You can change your password at any time:
+
+1. **Click the 🔑 icon** in the top right menu (next to your email)
+2. **Enter your current password**
+3. **Enter your new password** (minimum 6 characters)
+4. **Confirm your new password**
+5. **Click "Change Password"**
+
+**Password Requirements:**
+- Minimum 6 characters
+- Must be different from your current password
+- Use a strong, unique password for security
+
+**Note**: After changing your password, you'll be redirected to the dashboard and the security notification will no longer appear.
 
 ---
 
@@ -65,14 +101,49 @@ After logging in, you'll see the main dashboard with:
 - **Yellow alerts**: Low stock (below minimum threshold)
 
 ### Quick Actions
-- **Add Medicine**: Add a new medicine to inventory
-- **Adjust Stock**: Update stock levels
-- **View All**: Show all medicines
+- **📦 Add Stock**: Quick way to add stock to existing or new medicines
+- **+ Add Medicine**: Add a new medicine with full details
+- **📋 Order List**: View medicines that need to be ordered
+- **📊 Transaction History**: View all stock movements
+- **⚡ Bulk Operations**: Import/export CSV, bulk adjustments
+- **📷 Scanner**: Barcode/QR code scanner
 - **Filters**: Filter by status (expired, expiring soon, low stock)
 
 ---
 
+## Adding Stock
+
+The **Add Stock** feature is the quickest way to add stock to your inventory. It automatically creates medicines if they don't exist.
+
+### How to Add Stock
+
+1. **Click "📦 Add Stock"** button (top right of dashboard)
+
+2. **Enter medicine information:**
+   - **Medicine Name**: Type or select from the dropdown (searches existing medicines)
+   - **Batch Number**: Enter the batch or lot number
+   - **Expiry Date**: Select the expiry date
+   - **Quantity to Add**: Enter how many units you're adding
+   - **Minimum Threshold**: Set the minimum stock level for alerts
+   - **Notes** (optional): Any additional information
+
+3. **Click "Add Stock"**
+
+4. **What happens:**
+   - If the medicine exists (same name + batch), stock is added to the existing record
+   - If the medicine doesn't exist, a new medicine is created automatically
+   - You'll see a success message and be redirected to the dashboard
+
+**Benefits:**
+- Faster than adding medicine first, then stock
+- Automatically handles duplicate detection
+- Streamlined workflow for daily operations
+
+---
+
 ## Adding Medicines
+
+Use this when you need to set up a new medicine type with all details.
 
 1. **Click "Add Medicine" button** (top right of dashboard)
 
@@ -192,10 +263,25 @@ You can also use the search box to find medicines by name or batch number.
 - Daily automated checks run (cloud function)
 
 ### Q: Can I use this offline?
-**A**: Currently, an internet connection is required. Offline support is planned for future updates.
+**A**: Yes! The system works as a Progressive Web App (PWA) and supports offline functionality. You can:
+- View cached inventory data offline
+- Queue operations when offline (they'll sync when connection is restored)
+- Install the app on your device for better offline access
 
 ### Q: How do I print reports?
-**A**: Export functionality is coming in a future update. For now, you can take screenshots or contact your administrator.
+**A**: You can print inventory and transaction reports:
+- Click the **🖨️ Print** button on the dashboard or transactions page
+- Use your browser's print function (Ctrl+P / Cmd+P)
+- Reports include clinic branding and professional formatting
+
+### Q: How do I export data?
+**A**: Export functionality is available:
+- **CSV Export**: Click **📥 Export** button on dashboard or transactions page
+- Export includes all current inventory or transaction data
+- Open in Excel or Google Sheets for further analysis
+
+### Q: How do I change my password?
+**A**: Click the **🔑** icon in the top right menu, or use the notification banner on first login. You'll need to enter your current password for security.
 
 ### Q: Who can see this data?
 **A**: Only logged-in users from your clinic can access the system.
@@ -233,15 +319,20 @@ If you encounter issues or have questions:
 
 | Action | Steps |
 |--------|-------|
+| Add Stock | Dashboard → Add Stock → Enter details → Save |
 | Add Medicine | Dashboard → Add Medicine → Fill form → Save |
 | Adjust Stock | Find medicine → Click Adjust → Select type → Enter quantity → Save |
+| Change Password | Click 🔑 icon → Enter current & new password → Save |
 | View Alerts | Check alerts panel on dashboard |
 | Filter Inventory | Click filter buttons (All, Expired, Low Stock, etc.) |
-| Search Medicine | Type name or batch number in search box |
-| Log Out | Click your name/profile → Log Out |
+| Search Medicine | Type name or batch number in search box (Ctrl+F / Cmd+F) |
+| Export Data | Click 📥 Export button → Download CSV |
+| Print Report | Click 🖨️ Print button → Print dialog |
+| Log Out | Click Log Out button in top right |
 
 ---
 
-**Last Updated**: [Update this date]
-**Version**: MVP 1.0
+**Last Updated**: 2024  
+**Version**: 2.0  
+**Status**: Production Ready
 

@@ -47,6 +47,7 @@
       <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
       <div class="user-menu">
         <span class="user-info" id="userEmail"></span>
+        <a href="change-password.html" class="btn btn-secondary btn-sm" title="Change Password">🔑</a>
         <a href="notifications-settings.html" class="btn btn-secondary btn-sm" title="Notifications">🔔</a>
         <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
       </div>
@@ -546,6 +547,86 @@
       return div.innerHTML;
     }
 
+
+    // Show password change notification
+    function showPasswordChangeNotification() {
+      // Create notification banner
+      const notification = document.createElement('div');
+      notification.id = 'passwordChangeNotification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: var(--warning-color);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        width: 90%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        animation: slideDown 0.3s ease-out;
+      `;
+      
+      notification.innerHTML = `
+        <div style="flex: 1;">
+          <strong style="display: block; margin-bottom: 0.25rem;">🔒 Security Alert</strong>
+          <span>This is your first login. Please change your password for better security.</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="change-password.html" class="btn btn-primary btn-sm" style="background: white; color: var(--warning-color); border: none;">
+            Change Password
+          </a>
+          <button onclick="dismissPasswordNotification()" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">
+            Later
+          </button>
+        </div>
+      `;
+
+      // Add animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+
+      document.body.appendChild(notification);
+
+      // Auto-dismiss after 30 seconds
+      setTimeout(() => {
+        if (document.getElementById('passwordChangeNotification')) {
+          dismissPasswordNotification();
+        }
+      }, 30000);
+    }
+
+    // Dismiss password change notification
+    function dismissPasswordNotification() {
+      const notification = document.getElementById('passwordChangeNotification');
+      if (notification) {
+        notification.style.animation = 'slideDown 0.3s ease-out reverse';
+        setTimeout(() => {
+          notification.remove();
+        }, 300);
+      }
+    }
+
+    // Make dismissPasswordNotification available globally
+    window.dismissPasswordNotification = dismissPasswordNotification;
+
     // Initialize dashboard
     async function initDashboard() {
       // Wait for auth state to be determined
@@ -578,6 +659,12 @@
         if (seedLink) {
           seedLink.style.display = 'inline-block';
         }
+      }
+
+      // Check if user needs to change password (first login)
+      const shouldChangePassword = await needsPasswordChange();
+      if (shouldChangePassword) {
+        showPasswordChangeNotification();
       }
 
       // Set up filter buttons

@@ -256,7 +256,7 @@ All permissions are enforced by Firestore Security Rules. The rules:
 5. ✅ Allow users to create their own user document on first login
 
 **Location of Rules:**
-- `docs/FIRESTORE_RULES_COMPLETE.rules` - Complete rules file
+- `docs/FIRESTORE_RULES_FINAL.rules` - Production-ready rules file (includes notification preferences)
 - Firebase Console → Firestore Database → Rules tab
 
 ---

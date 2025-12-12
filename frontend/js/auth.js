@@ -13,6 +13,7 @@ async function createOrGetUserDocument(user) {
         email: user.email,
         role: 'staff', // Default role - change manually for admins
         displayName: user.displayName || user.email.split('@')[0],
+        passwordChanged: false, // Track if user has changed their password
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
@@ -138,6 +139,67 @@ async function resetPassword(email) {
     }
     
     return { success: false, error: errorMessage };
+  }
+}
+
+// Change password (requires current password)
+async function changePassword(currentPassword, newPassword) {
+  try {
+    const user = getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Re-authenticate user with current password
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    await user.reauthenticateWithCredential(credential);
+
+    // Update password
+    await user.updatePassword(newPassword);
+
+    // Update passwordChanged flag in Firestore
+    await db.collection('users').doc(user.uid).update({
+      passwordChanged: true,
+      passwordChangedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    return { success: true, message: 'Password changed successfully!' };
+  } catch (error) {
+    let errorMessage = 'Failed to change password.';
+    
+    switch (error.code) {
+      case 'auth/wrong-password':
+        errorMessage = 'Current password is incorrect.';
+        break;
+      case 'auth/weak-password':
+        errorMessage = 'New password is too weak. Please use at least 6 characters.';
+        break;
+      case 'auth/requires-recent-login':
+        errorMessage = 'Please log out and log back in before changing your password.';
+        break;
+      default:
+        errorMessage = error.message || 'Failed to change password. Please try again.';
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+}
+
+// Check if user needs to change password
+async function needsPasswordChange() {
+  try {
+    const user = getCurrentUser();
+    if (!user) return false;
+
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      return userData.passwordChanged === false || userData.passwordChanged === undefined;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking password change status:', error);
+    return false;
   }
 }
 

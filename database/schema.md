@@ -101,16 +101,36 @@ Stores active and resolved alerts for expiry and low stock.
 
 ---
 
-### `users` (optional - managed by Firebase Auth)
+### `users`
 
-If you need to store additional user information beyond Firebase Auth:
+Stores additional user information beyond Firebase Auth. Created automatically on first login.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `email` | string | Yes | User email (from Firebase Auth) |
 | `role` | string | Yes | User role: `"admin"`, `"staff"` |
 | `displayName` | string | Optional | User's display name |
+| `passwordChanged` | boolean | Yes | Whether user has changed their password from default (default: `false`) |
+| `passwordChangedAt` | timestamp | Optional | When the password was last changed |
 | `createdAt` | timestamp | Yes | Account creation date |
+
+**Example:**
+```json
+{
+  "email": "staff@ehafoclinic.com",
+  "role": "staff",
+  "displayName": "John Doe",
+  "passwordChanged": true,
+  "passwordChangedAt": "2024-01-15T10:30:00Z",
+  "createdAt": "2024-01-10T08:00:00Z"
+}
+```
+
+**Notes:**
+- User documents are created automatically on first login
+- Default role is `"staff"` - admins must manually set role to `"admin"` in Firestore
+- `passwordChanged` is set to `false` for new users, prompting password change on first login
+- Users can change their password via the Change Password page
 
 ---
 
