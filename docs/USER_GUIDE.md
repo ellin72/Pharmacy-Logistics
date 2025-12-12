@@ -61,7 +61,7 @@ After logging in, you'll see the main dashboard with:
 
 ### Alerts Panel
 - **Red alerts**: Expired medicines (urgent action needed)
-- **Orange alerts**: Expiring soon (within 30 days)
+- **Orange alerts**: Expiring soon (within 3 months)
 - **Yellow alerts**: Low stock (below minimum threshold)
 
 ### Quick Actions
@@ -141,7 +141,7 @@ After logging in, you'll see the main dashboard with:
 
 #### ⚠️ Expiring Soon
 - **Color**: Orange
-- **Meaning**: Medicine expires within 30 days
+- **Meaning**: Medicine expires within 3 months (90 days)
 - **Action**: Plan to use or dispose before expiry
 
 #### 📉 Low Stock
@@ -169,7 +169,7 @@ Use the filter buttons on the dashboard:
 
 - **All**: Show all medicines
 - **Expired**: Show only expired medicines
-- **Expiring Soon**: Show medicines expiring within 30 days
+- **Expiring Soon**: Show medicines expiring within 3 months
 - **Low Stock**: Show medicines below threshold
 - **In Stock**: Show medicines with adequate stock
 

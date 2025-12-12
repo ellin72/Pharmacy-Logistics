@@ -1,6 +1,6 @@
 // Inventory management functions
 
-const EXPIRY_WARNING_DAYS = 30; // Alert if expiring within 30 days
+const EXPIRY_WARNING_DAYS = 90; // Alert if expiring within 3 months (90 days)
 
 // Check if medicine with same name and batch already exists
 async function findDuplicateMedicine(name, batch) {
@@ -506,4 +506,3 @@ function downloadCSV(csvContent, filename) {
   link.click();
   document.body.removeChild(link);
 }
-

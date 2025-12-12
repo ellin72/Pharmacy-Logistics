@@ -5,7 +5,7 @@
 - Track **medications** with expiry dates, batch numbers, and stock levels.  
 - Allow **add/remove/adjust** operations when stock changes.  
 - Generate **alerts** for:
-  - Expiring soon (e.g., within 30 days).  
+  - Expiring soon (e.g., within 3 months).  
   - Low stock (below threshold).  
 - Provide a **simple dashboard** for clinic staff.  
 - Keep it **lightweight, offline-resilient**, and easy to maintain.

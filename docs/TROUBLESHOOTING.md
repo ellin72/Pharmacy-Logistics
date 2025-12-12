@@ -110,9 +110,9 @@ If errors persist:
 **Solution:**
 1. Alerts are created when:
    - Medicine expires (expiry date passed)
-   - Medicine expiring soon (within 30 days)
+   - Medicine expiring soon (within 3 months)
    - Stock below minimum threshold
-2. Try adding a medicine with expiry date within 30 days to test
+2. Try adding a medicine with expiry date within 3 months to test
 3. Try setting stock below threshold to test low stock alert
 
 ---
