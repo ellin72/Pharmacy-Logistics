@@ -111,9 +111,14 @@
 
     <!-- Alerts Panel -->
     <div class="card alerts-panel">
-      <div class="card-header">
-        <h2 class="card-title">⚠️ Alerts</h2>
-        <span id="alertCount" class="badge">0 alerts</span>
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <h2 class="card-title" style="margin: 0;">⚠️ Alerts</h2>
+          <span id="alertCount" class="badge">0 alerts</span>
+        </div>
+        <button id="resolveAllBtn" class="btn btn-sm btn-primary" onclick="resolveAllAlertsClick()" style="display: none;">
+          ✅ Resolve All
+        </button>
       </div>
       <div id="alertsContainer">
         <div class="loading">Loading alerts...</div>
@@ -193,6 +198,7 @@
     let filteredMedicines = [];
     let medicinesUnsubscribe = null;
     let alertsUnsubscribe = null;
+    let currentAlerts = []; // Store current alerts to avoid race conditions
 
     // Format date for display
     function formatDate(date) {
@@ -383,8 +389,18 @@
     function renderAlerts(alerts) {
       const container = document.getElementById('alertsContainer');
       const countEl = document.getElementById('alertCount');
+      const resolveAllBtn = document.getElementById('resolveAllBtn');
+      
+      // Store current alerts to avoid race conditions
+      // This ensures resolveAllAlertsClick() uses the alerts the user actually sees
+      currentAlerts = alerts;
       
       countEl.textContent = `${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
+
+      // Show/hide "Resolve All" button based on alerts count
+      if (resolveAllBtn) {
+        resolveAllBtn.style.display = alerts.length > 0 ? 'block' : 'none';
+      }
 
       if (alerts.length === 0) {
         container.innerHTML = '<div class="empty-state"><p>No active alerts. All medicines are in good condition! ✅</p></div>';
@@ -419,6 +435,82 @@
         // Alert will be removed automatically via real-time listener
       } else {
         alert('Failed to resolve alert: ' + result.error);
+      }
+    }
+
+    // Resolve all alerts
+    async function resolveAllAlertsClick() {
+      const resolveAllBtn = document.getElementById('resolveAllBtn');
+      
+      // Use current alerts from real-time subscription to avoid race conditions
+      // This ensures we're resolving the alerts the user actually sees
+      const alertsToResolve = [...currentAlerts];
+      const actualCount = alertsToResolve.length;
+
+      if (actualCount === 0) {
+        return;
+      }
+
+      // Check if function is available
+      const resolveAllFn = typeof resolveAllAlerts !== 'undefined' ? resolveAllAlerts : 
+                           (typeof window !== 'undefined' && window.resolveAllAlerts) ? window.resolveAllAlerts : null;
+      
+      if (!resolveAllFn) {
+        alert('Error: Resolve All function is not available. Please refresh the page.');
+        console.error('resolveAllAlerts function not found');
+        return;
+      }
+
+      // Confirm action with actual count
+      const confirmed = confirm(`Are you sure you want to resolve all ${actualCount} alert${actualCount !== 1 ? 's' : ''}?`);
+      if (!confirmed) {
+        return;
+      }
+
+      // Disable button and show loading state
+      if (resolveAllBtn) {
+        resolveAllBtn.disabled = true;
+        resolveAllBtn.textContent = 'Resolving...';
+      }
+
+      try {
+        // Pass the current alerts to avoid re-fetching and race conditions
+        const result = await resolveAllFn(alertsToResolve);
+        
+        if (result.success) {
+          // Show success message
+          if (typeof showInAppNotification === 'function') {
+            showInAppNotification(
+              `✅ Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? 's' : ''}`,
+              'success',
+              3000
+            );
+          } else {
+            alert(result.message || `Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? 's' : ''}`);
+          }
+          // Alerts will be removed automatically via real-time listener
+          // Button will be hidden automatically when alerts list updates
+          // But re-enable it in case listener hasn't updated yet
+          if (resolveAllBtn) {
+            resolveAllBtn.disabled = false;
+            resolveAllBtn.textContent = '✅ Resolve All';
+          }
+        } else {
+          alert('Failed to resolve alerts: ' + result.error);
+          // Re-enable button on error
+          if (resolveAllBtn) {
+            resolveAllBtn.disabled = false;
+            resolveAllBtn.textContent = '✅ Resolve All';
+          }
+        }
+      } catch (error) {
+        console.error('Error in resolveAllAlertsClick:', error);
+        alert('An error occurred while resolving alerts. Please try again.');
+        // Re-enable button on error
+        if (resolveAllBtn) {
+          resolveAllBtn.disabled = false;
+          resolveAllBtn.textContent = '✅ Resolve All';
+        }
       }
     }
 

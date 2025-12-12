@@ -104,6 +104,61 @@ async function resolveAlert(alertId) {
   }
 }
 
+// Resolve all active alerts
+// Optionally accepts an alerts array to avoid race conditions
+// If not provided, fetches all unresolved alerts from Firestore
+async function resolveAllAlerts(alertsArray = null) {
+  try {
+    const user = getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Use provided alerts array or fetch from Firestore
+    let alerts;
+    if (alertsArray && Array.isArray(alertsArray) && alertsArray.length > 0) {
+      // Use provided alerts (from real-time subscription) to avoid race conditions
+      alerts = alertsArray;
+    } else {
+      // Fallback: fetch all unresolved alerts
+      alerts = await getAllAlerts();
+    }
+    
+    if (alerts.length === 0) {
+      return { success: true, message: 'No alerts to resolve', resolved: 0 };
+    }
+
+    // Resolve all alerts in batch using Firestore batch write
+    const batch = db.batch();
+    const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    
+    alerts.forEach(alert => {
+      const alertRef = db.collection('alerts').doc(alert.id);
+      batch.update(alertRef, {
+        resolved: true,
+        resolvedAt: timestamp,
+        resolvedBy: user.uid
+      });
+    });
+
+    await batch.commit();
+    
+    return { 
+      success: true, 
+      message: `Successfully resolved ${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`,
+      resolved: alerts.length
+    };
+  } catch (error) {
+    console.error('Error resolving all alerts:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Make resolveAllAlerts globally accessible
+if (typeof window !== 'undefined') {
+  window.resolveAllAlerts = resolveAllAlerts;
+}
+
 // Get alerts by type
 async function getAlertsByType(type) {
   try {

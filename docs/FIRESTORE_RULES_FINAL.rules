@@ -84,8 +84,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() && 
                      (
                        // User updating their own document (but can't change role)
+                       // Allow if role is not being updated OR role is unchanged
                        (request.auth.uid == userId && 
-                        request.resource.data.role == resource.data.role) ||
+                        (!('role' in request.resource.data) || 
+                         request.resource.data.role == resource.data.role)) ||
                        // Admin updating any document
                        isAdmin()
                      );
