@@ -3,6 +3,12 @@
 // Trigger notification when alert is created
 async function triggerAlertNotification(alert) {
   try {
+    // Attempt to queue an email notification (if enabled in user preferences and backend is configured)
+    queueEmailNotificationForAlert(alert).catch(err => {
+      // Log but don't break in-app/browser notifications
+      console.error('Error queueing email notification:', err);
+    });
+
     // Add to notification center
     if (typeof addToNotificationCenter === 'function') {
       addToNotificationCenter({
@@ -45,6 +51,127 @@ async function triggerAlertNotification(alert) {
   } catch (error) {
     console.error('Error triggering alert notification:', error);
   }
+}
+
+// Queue an email notification document for the Firebase "Trigger Email" extension.
+// This function assumes the official Firebase extension is installed and configured
+// to watch the "mail" collection in Firestore.
+async function queueEmailNotificationForAlert(alert) {
+  // Safety checks - require Firestore and Auth
+  if (typeof db === 'undefined' || typeof firebase === 'undefined') {
+    return;
+  }
+
+  // Get current user (recipient) if available
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const userEmail = user?.email;
+
+  if (!user || !userEmail) {
+    // No authenticated user – nothing to do here
+    return;
+  }
+
+  // Load notification preferences from Firestore directly to avoid tight coupling
+  const prefsRef = db.collection('notificationPreferences').doc(user.uid);
+  const prefsSnap = await prefsRef.get();
+
+  if (!prefsSnap.exists) {
+    // Use same defaults as UI if no doc exists yet
+    return;
+  }
+
+  const prefs = prefsSnap.data() || {};
+
+  // Check if email notifications are enabled
+  if (!prefs.emailEnabled) {
+    return;
+  }
+
+  const types = prefs.types || {};
+
+  // Map alert type to preference key
+  const alertTypeKey = alert.type; // 'expired' | 'expiry_soon' | 'low_stock'
+
+  // If this alert type is explicitly disabled, skip
+  if (types[alertTypeKey] === false) {
+    return;
+  }
+
+  // For now, we only implement "immediate" emails.
+  // Daily/weekly summaries should be implemented by a backend scheduler.
+  const frequency = prefs.emailFrequency || 'daily';
+  if (frequency !== 'immediate') {
+    // Respect the setting and do not send individual emails for non-immediate modes yet.
+    return;
+  }
+
+  // Build email subject and body
+  const subject = alert.type === 'expired'
+    ? `Expired medicine: ${alert.medicineName}`
+    : alert.type === 'expiry_soon'
+    ? `Medicine expiring soon: ${alert.medicineName}`
+    : `Low stock: ${alert.medicineName}`;
+
+  const dueOnText = alert.dueOn
+    ? new Date(alert.dueOn).toLocaleDateString()
+    : null;
+
+  const textBodyLines = [
+    `Pharmacy inventory alert for ${alert.medicineName}.`,
+    '',
+    alert.type === 'expired'
+      ? 'This medicine has expired and should be removed from usable stock.'
+      : alert.type === 'expiry_soon'
+      ? `This medicine is expiring soon${dueOnText ? ` (expiry date: ${dueOnText})` : ''}.`
+      : 'Stock is at or below the configured minimum threshold.',
+    '',
+    `Alert type: ${alert.type}`,
+    dueOnText ? `Expiry date: ${dueOnText}` : null,
+    '',
+    'You are receiving this email because email alerts are enabled in your Notification Settings.',
+    'To change your preferences, open the Pharmacy Logistics app and go to: Settings → Notification Settings.'
+  ].filter(Boolean);
+
+  const textBody = textBodyLines.join('\n');
+
+  // Minimal HTML version
+  const htmlBody = `
+    <p><strong>Pharmacy inventory alert for ${alert.medicineName}.</strong></p>
+    <p>
+      ${
+        alert.type === 'expired'
+          ? 'This medicine has <strong>expired</strong> and should be removed from usable stock.'
+          : alert.type === 'expiry_soon'
+          ? `This medicine is <strong>expiring soon</strong>${dueOnText ? ` (expiry date: <strong>${dueOnText}</strong>)` : ''}.`
+          : 'Stock is at or below the configured <strong>minimum threshold</strong>.'
+      }
+    </p>
+    <p>
+      Alert type: <strong>${alert.type}</strong><br>
+      ${dueOnText ? `Expiry date: <strong>${dueOnText}</strong><br>` : ''}
+    </p>
+    <p style="font-size: 12px; color: #666;">
+      You are receiving this email because email alerts are enabled in your Notification Settings.<br>
+      To change your preferences, open the Pharmacy Logistics app and go to: <em>Settings → Notification Settings</em>.
+    </p>
+  `;
+
+  // Create document in the "mail" collection for the Trigger Email extension.
+  // See: https://firebase.google.com/products/extensions/trigger-email
+  await db.collection('mail').add({
+    to: userEmail,
+    message: {
+      subject: subject,
+      text: textBody,
+      html: htmlBody
+    },
+    // Helpful metadata fields (not used directly by the extension but useful for logs)
+    alertType: alert.type,
+    medicineId: alert.medicineId || null,
+    medicineName: alert.medicineName || null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    queuedByUid: user.uid
+  });
 }
 
 // Get all active alerts
