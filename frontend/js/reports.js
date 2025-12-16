@@ -132,34 +132,46 @@ function generatePDFReport(title, content, filename = 'report') {
         /* Print Stamp Footer - Ministry Stamp in Rectangle */
         .print-stamp-footer {
           position: fixed;
-          bottom: 20px;
+          bottom: 0 !important; /* Force to bottom of page */
           left: 50%;
           transform: translateX(-50%);
           text-align: center;
-          font-size: 10px;
+          font-size: 9px;
           color: #9333ea; /* Purple text */
-          line-height: 1.6;
-          width: 80%;
-          max-width: 500px;
+          line-height: 1.2;
+          width: 250px; /* Rectangle width */
+          height: 100px; /* Further reduced height */
           border: 2px solid #9333ea; /* Purple border */
-          padding: 15px;
+          padding: 8px;
           background: transparent; /* Transparent background */
           box-shadow: none; /* Remove shadow */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 0 !important; /* Force to bottom */
         }
         
         .print-stamp-footer .ministry-name {
           font-weight: bold;
-          font-size: 11px;
-          margin-bottom: 5px;
+          font-size: 8px;
+          margin-bottom: 1px;
+          color: #9333ea; /* Purple text */
+        }
+        
+        .print-stamp-footer > div:not(.ministry-name):not(.stamp-date) {
+          font-size: 7px;
+          margin-bottom: 0.5px;
           color: #9333ea; /* Purple text */
         }
         
         .print-stamp-footer .stamp-date {
           font-weight: bold;
-          margin-top: 8px;
-          padding-top: 8px;
+          margin-top: 3px;
+          padding-top: 3px;
           border-top: 1px solid #9333ea; /* Purple border */
           color: #9333ea; /* Purple text */
+          font-size: 8px;
         }
         
         /* Ensure all text in stamp footer is purple */
