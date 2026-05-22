@@ -74,10 +74,14 @@ Pharmacy-Logistics/
 │   ├── add-medicine.html       # Add medicine form
 │   ├── add-stock.html          # Quick add stock page
 │   ├── adjust-stock.html       # Adjust stock form
+│   ├── dispense.html           # Dispense medicine to patients ✨
+│   ├── suppliers.html          # Supplier management ✨
+│   ├── analytics.html          # Analytics & reports ✨
 │   ├── barcode-scanner.html    # Barcode scanner interface
 │   ├── bulk-operations.html    # Bulk import/export
 │   ├── transactions.html       # Transaction history
 │   ├── order-list.html         # Low stock order list
+│   ├── emergency-orders.html   # Emergency order management
 │   ├── notifications-settings.html  # Notification preferences
 │   ├── seed-medicines.html     # Admin: Seed medicine templates
 │   ├── css/
@@ -85,7 +89,11 @@ Pharmacy-Logistics/
 │   ├── js/
 │   │   ├── config.js           # Firebase configuration
 │   │   ├── auth.js             # Authentication logic
+│   │   ├── validation.js       # Input validation & sanitization ✨
 │   │   ├── inventory.js        # Inventory management
+│   │   ├── dispense.js         # Dispensing workflow ✨
+│   │   ├── suppliers.js        # Supplier management ✨
+│   │   ├── analytics.js        # Analytics & reporting ✨
 │   │   ├── alerts.js           # Alert system
 │   │   ├── transactions.js     # Transaction management
 │   │   ├── notifications.js    # Notification system
@@ -93,7 +101,9 @@ Pharmacy-Logistics/
 │   │   ├── offline.js          # Offline support
 │   │   ├── indexeddb.js        # Local storage
 │   │   ├── users.js            # User management
-│   │   └── reports.js          # Reporting functions
+│   │   ├── reports.js          # Reporting functions
+│   │   ├── metrics.js          # Operating metrics
+│   │   └── emergency-orders.js # Emergency order logic
 │   ├── sw.js                   # Service worker (PWA)
 │   ├── manifest.json           # PWA manifest
 │   └── images/                 # Images and icons
@@ -101,12 +111,22 @@ Pharmacy-Logistics/
 │   ├── schema.md               # Data model documentation
 │   └── seed-data.json          # Sample data
 ├── docs/
+│   ├── IMPROVEMENTS_ROADMAP.md # Full improvement plan & roadmap ✨
+│   ├── FIRESTORE_RULES_FINAL.rules  # Security rules (updated) ✨
 │   ├── MVP_PLAN.md             # Detailed MVP build plan
 │   ├── DEPLOYMENT.md           # Deployment instructions
 │   ├── USER_GUIDE.md           # User manual
-│   ├── TROUBLESHOOTING.md     # Troubleshooting guide
-│   ├── SECURITY_PERMISSIONS.md # Security documentation
-│   └── [other documentation files]
+│   ├── TROUBLESHOOTING.md      # Troubleshooting guide
+│   └── SECURITY_PERMISSIONS.md # Security documentation
+├── .github/
+│   ├── workflows/
+│   │   └── ci.yml              # CI: lint, validate, secret scan ✨
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml      # Bug report template ✨
+│   │   ├── feature_request.yml # Feature request template ✨
+│   │   └── security_issue.yml  # Security issue template ✨
+│   └── mlc_config.json         # Markdown link checker config ✨
+├── CONTRIBUTING.md             # Contribution guide ✨
 ├── firebase.json               # Firebase configuration
 └── README.md
 ```
@@ -284,17 +304,19 @@ See `database/schema.md` for detailed schema documentation.
 
 ## 🚧 Future Enhancements
 
-See `docs/IMPROVEMENTS_ROADMAP.md` for planned features:
+See `docs/IMPROVEMENTS_ROADMAP.md` for the full improvement plan including:
 
-- Advanced analytics and reporting
+- Purchase order / reorder workflow
+- FIFO/FEFO batch dispensing guidance
+- Patient prescription history
 - SMS notifications
 - Multi-location support
-- Supplier management
-- Purchase order tracking
+- Error monitoring (Sentry)
+- Two-factor authentication
 
 ## 🤝 Contributing
 
-This is a clinic-specific project for Ehafo Clinic. For improvements or issues, please contact the project administrator.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branching strategy, code style guide, security policy, and manual QA checklist.
 
 ## 📄 License
 
@@ -310,7 +332,22 @@ For setup issues or questions:
 
 ## 📝 Changelog
 
-### Recent Updates
+### v1.2 (Latest)
+
+- ✅ Added dispensing workflow (`dispense.html`) — records medicine dispensed per patient, deducts stock, creates audit trail
+- ✅ Added supplier management (`suppliers.html`) — CRUD for medicine suppliers with contact info
+- ✅ Added analytics & reports page (`analytics.html`) — KPIs, expiring-soon, low-stock, consumption, dispense log
+- ✅ Fixed Firestore offline persistence (was commented out — now enabled with `synchronizeTabs: true`)
+- ✅ Added input validation & sanitization utility (`js/validation.js`)
+- ✅ Added loading skeleton CSS and `input-error` styles
+- ✅ Added `--info-color` CSS variable (was referenced but undefined)
+- ✅ Updated dashboard quick actions to include Dispense, Analytics, Suppliers links
+- ✅ Updated Firestore security rules for new `dispenseRecords` and `suppliers` collections
+- ✅ Added GitHub Actions CI workflow (HTML lint, JS lint, secret scan, file structure check)
+- ✅ Added GitHub issue templates (bug, feature, security)
+- ✅ Added CONTRIBUTING.md with branching guide, code style, and security policy
+
+### v1.1
 
 - ✅ Added "Add Stock" page for quick stock operations
 - ✅ Implemented medicine seeding for bulk template creation
@@ -322,6 +359,6 @@ For setup issues or questions:
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.2  
 **Last Updated**: 2024  
 **Maintained by**: Ehafo Clinic Development Team

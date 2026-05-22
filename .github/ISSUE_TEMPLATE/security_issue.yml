@@ -1,0 +1,43 @@
+name: 🔒 Security Issue
+description: Report a security vulnerability (use this for non-critical issues; for critical issues email the administrator directly)
+title: "[Security]: "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **For critical security vulnerabilities** (data breach, authentication bypass, etc.) please contact the project administrator directly rather than filing a public issue.
+
+        For lower-risk security improvements, please use this form.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Security issue description
+      placeholder: Describe the vulnerability or security concern...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical — data breach / auth bypass
+        - High — privilege escalation / data exposure
+        - Medium — information disclosure
+        - Low — hardening / best practice
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential impact
+      placeholder: What data or users are at risk?
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested mitigation
+      placeholder: Any fixes or workarounds you can suggest?

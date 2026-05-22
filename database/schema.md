@@ -336,3 +336,45 @@ score = (goodStandingPct × 0.45) + (stockAvailPct × 0.30) − (expiredPct × 0
 ```
 
 Clamped to 0–100. Grades: Excellent ≥85 / Good ≥70 / Fair ≥50 / At Risk ≥30 / Critical <30.
+
+---
+
+### `dispenseRecords` ✨ (new)
+
+Records every medicine dispensing event (medicine given to a patient).
+
+| Field               | Type      | Required | Description                                     |
+| ------------------- | --------- | -------- | ----------------------------------------------- |
+| `medicineId`        | string    | Yes      | Reference to medicine document ID               |
+| `medicineName`      | string    | Yes      | Medicine name (for quick reference)             |
+| `medicineBatch`     | string    | Optional | Batch number of dispensed medicine              |
+| `quantityDispensed` | number    | Yes      | Number of units dispensed (> 0)                 |
+| `patientId`         | string    | Yes      | Patient reference / ID number                   |
+| `prescribedBy`      | string    | Optional | Name of prescribing doctor or clinician         |
+| `notes`             | string    | Optional | Dosage instructions or special notes            |
+| `dispensedBy`       | string    | Yes      | User ID who dispensed (equals request.auth.uid) |
+| `dispensedByEmail`  | string    | Optional | Email of dispensing staff member                |
+| `timestamp`         | timestamp | Yes      | When the dispense event occurred                |
+
+**Firestore rules:** Any authenticated user can create (with `dispensedBy == auth.uid`); only admin can update or delete.
+
+---
+
+### `suppliers` ✨ (new)
+
+Stores medicine supplier / vendor information.
+
+| Field           | Type      | Required | Description                              |
+| --------------- | --------- | -------- | ---------------------------------------- |
+| `name`          | string    | Yes      | Supplier company name                    |
+| `contactPerson` | string    | Optional | Primary contact name                     |
+| `phone`         | string    | Optional | Phone number                             |
+| `email`         | string    | Optional | Email address for orders                 |
+| `address`       | string    | Optional | Physical or postal address               |
+| `notes`         | string    | Optional | Lead time, payment terms, etc.           |
+| `createdAt`     | timestamp | Optional | When supplier was added                  |
+| `createdBy`     | string    | Optional | User ID who added the supplier           |
+| `updatedAt`     | timestamp | Optional | Last modification timestamp              |
+| `updatedBy`     | string    | Optional | User ID who last updated                 |
+
+**Firestore rules:** Authenticated users can create and update; only admin can delete.
