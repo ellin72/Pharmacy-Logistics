@@ -5,36 +5,59 @@ A comprehensive, clinic-ready inventory management system for tracking medicatio
 ## 🎯 Core Features
 
 ### Inventory Management
+
 - ✅ **Track medications** with expiry dates, batch numbers, and stock levels
+- ✅ **Category Support** - Medicines classified into 14 clinical categories
 - ✅ **Add Stock** - Quick stock addition with automatic medicine creation
 - ✅ **Add Medicine** - Full medicine entry with all details
 - ✅ **Adjust Stock** - Add, remove, or adjust stock quantities
 - ✅ **Bulk Operations** - Import/export CSV, bulk stock adjustments
+- ✅ **Bulk Delete** - Admin multi-select checkbox delete with mandatory "DELETE" confirmation for 10+ items (soft-delete with full audit trail)
 - ✅ **Barcode Scanner** - Scan barcodes to quickly find medicines
 - ✅ **Real-time Updates** - Live inventory synchronization across devices
 
 ### Automated Alerts & Monitoring
+
 - ✅ **Expiring Soon** - Alerts for medicines expiring within 3 months (90 days)
 - ✅ **Low Stock** - Automatic alerts when stock falls below threshold
 - ✅ **Expired Medicines** - Immediate alerts for expired items
 - ✅ **Alert Dashboard** - Centralized alert management panel
 - ✅ **Email Notifications** - Configurable email alerts (optional)
 
+### Operating Metrics Dashboard
+
+- ✅ **Overall Operating Score** — Weighted KPI: `GoodStanding×0.45 + StockAvail×0.30 − Expired×0.15 − LowStock×0.10` (0–100, grade A–F)
+- ✅ **6 KPI Cards** — Good Standing, Low Stock, Expired, Expiring Soon, Out of Stock, Stock Availability
+- ✅ **7-Day Trend Sparkline** — Historical score visualisation
+- ✅ **Category & Status Filtering** — Slice metrics by medicine category or status
+- ✅ **Daily Snapshots** — Cloud Function saves metrics to `operationalMetricsSnapshots` every 24 hours
+
+### Emergency Orders
+
+- ✅ **Request Emergency Orders** — Staff can request urgent medicine orders
+- ✅ **Admin Approval Workflow** — Status transitions: Pending → Approved → Ordered → Fulfilled / Cancelled
+- ✅ **Email Notifications** — Admins notified on new order creation (Cloud Function + SMTP)
+- ✅ **Audit Trail** — All status changes logged to `transactions` collection
+- ✅ **Dedicated Management Page** — `emergency-orders.html` with tab filtering
+
 ### Dashboard & Reporting
+
 - ✅ **Interactive Dashboard** - Real-time inventory overview with statistics
 - ✅ **Smart Filtering** - Filter by status (expired, expiring soon, low stock, in stock)
 - ✅ **Search Functionality** - Search by medicine name or batch number
 - ✅ **Transaction History** - Complete audit trail of all stock movements
-- ✅ **Order List** - Generate lists of low stock items for ordering
+- ✅ **Order List** - Generate lists of low stock items for ordering with emergency order preview
 - ✅ **Export & Print** - Export inventory to CSV or print reports
 
 ### User Management & Security
+
 - ✅ **Role-Based Access** - Admin and Staff roles with appropriate permissions
 - ✅ **Secure Authentication** - Firebase Authentication with email/password
 - ✅ **User Management** - Admin can manage user roles and permissions
 - ✅ **Audit Trail** - All actions logged with user and timestamp
 
 ### Advanced Features
+
 - ✅ **Offline Support** - Progressive Web App (PWA) with offline functionality
 - ✅ **Service Worker** - Caches data for offline access
 - ✅ **Conflict Resolution** - Handles data conflicts when syncing
@@ -99,6 +122,7 @@ Pharmacy-Logistics/
 ### Setup Instructions
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd Pharmacy-Logistics
@@ -112,6 +136,7 @@ Pharmacy-Logistics/
 
 3. **Configure Firebase**
    - Edit `frontend/js/config.js` with your Firebase credentials:
+
    ```javascript
    const firebaseConfig = {
      apiKey: "your-api-key",
@@ -119,7 +144,7 @@ Pharmacy-Logistics/
      projectId: "your-project-id",
      storageBucket: "your-project.appspot.com",
      messagingSenderId: "your-sender-id",
-     appId: "your-app-id"
+     appId: "your-app-id",
    };
    ```
 
@@ -146,6 +171,7 @@ Pharmacy-Logistics/
 ### Collections
 
 #### `medicines`
+
 - `name` (string): Medicine name
 - `batch` (string): Batch number
 - `expiryDate` (timestamp): Expiry date
@@ -158,6 +184,7 @@ Pharmacy-Logistics/
 - `notes` (string): Optional notes
 
 #### `transactions`
+
 - `medicineId` (string): Reference to medicine
 - `type` (string): "add", "remove", "adjust"
 - `quantity` (number): Quantity changed (positive for add, negative for remove)
@@ -168,6 +195,7 @@ Pharmacy-Logistics/
 - `timestamp` (timestamp): Transaction time
 
 #### `alerts`
+
 - `medicineId` (string): Reference to medicine
 - `medicineName` (string): Medicine name (for quick reference)
 - `type` (string): "expiry_soon", "low_stock", "expired"
@@ -177,6 +205,7 @@ Pharmacy-Logistics/
 - `createdAt` (timestamp): Alert creation time
 
 #### `users`
+
 - `email` (string): User email
 - `role` (string): "admin" or "staff"
 - `displayName` (string): User display name
@@ -194,6 +223,7 @@ See `database/schema.md` for detailed schema documentation.
 ## 🔐 User Roles
 
 ### Admin (Pharmacist/Clinic Manager)
+
 - Full access to all features
 - Can delete medicines
 - Can manage user roles
@@ -202,6 +232,7 @@ See `database/schema.md` for detailed schema documentation.
 - Can modify security settings
 
 ### Staff
+
 - Can add/remove stock
 - Can view inventory
 - Can create medicines
@@ -212,21 +243,25 @@ See `database/schema.md` for detailed schema documentation.
 ## ✨ Key Features Explained
 
 ### Add Stock vs Add Medicine
+
 - **Add Stock**: Quick way to add stock to existing medicines or create new ones. Perfect for daily stock operations.
 - **Add Medicine**: Full medicine entry form with all details. Use when you need to set up a new medicine type.
 
 ### Dashboard Filtering
+
 - The dashboard **only shows medicines with stock** (quantity > 0)
 - Medicines with 0 quantity are hidden but can be found via search
 - Use filters to view: All, Expired, Expiring Soon, Low Stock, or In Stock
 
 ### Alert System
+
 - **Expiring Soon**: Triggers 3 months (90 days) before expiry
 - **Low Stock**: Triggers when quantity falls below minimum threshold
 - **Expired**: Triggers immediately when expiry date passes
 - Alerts auto-update when stock or expiry dates change
 
 ### Offline Support
+
 - System works offline using cached data
 - Changes are queued and synced when connection is restored
 - Conflict resolution handles simultaneous edits
@@ -250,6 +285,7 @@ See `database/schema.md` for detailed schema documentation.
 ## 🚧 Future Enhancements
 
 See `docs/IMPROVEMENTS_ROADMAP.md` for planned features:
+
 - Advanced analytics and reporting
 - SMS notifications
 - Multi-location support
@@ -267,6 +303,7 @@ Proprietary - Ehafo Clinic Internal Use
 ## 🆘 Support
 
 For setup issues or questions:
+
 1. Check the documentation in the `docs/` folder
 2. Review `docs/TROUBLESHOOTING.md` for common issues
 3. Contact the development team
@@ -274,6 +311,7 @@ For setup issues or questions:
 ## 📝 Changelog
 
 ### Recent Updates
+
 - ✅ Added "Add Stock" page for quick stock operations
 - ✅ Implemented medicine seeding for bulk template creation
 - ✅ Updated expiry warning to 3 months (90 days)

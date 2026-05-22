@@ -1,273 +1,368 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Add Medicine - Pharmacy Logistics System</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-  <div class="header">
-    <div class="header-content">
-      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
-      <div class="user-menu">
-        <span class="user-info" id="userEmail"></span>
-        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Medicine - Pharmacy Logistics System</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+        <div class="user-menu">
+          <span class="user-info" id="userEmail"></span>
+          <button class="btn btn-secondary btn-sm" onclick="logout()">
+            Log Out
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="container">
-    <div class="dashboard-header">
-      <h1 class="dashboard-title">Add New Medicine</h1>
-      <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
+    <div class="container">
+      <div class="dashboard-header">
+        <h1 class="dashboard-title">Add New Medicine</h1>
+        <a href="dashboard.html" class="btn btn-secondary"
+          >← Back to Dashboard</a
+        >
+      </div>
 
-    <div class="card">
-      <form id="addMedicineForm">
-        <div class="form-group">
-          <label for="name" class="form-label">Medicine Name *</label>
-          <input type="text" id="name" class="form-input" required placeholder="e.g., Paracetamol 500mg" autocomplete="off">
-          <div class="form-error hidden" id="nameError"></div>
-          <div id="duplicateWarning" class="message message-info hidden" style="margin-top: 0.5rem;"></div>
-        </div>
-
-        <div class="form-group">
-          <label for="batch" class="form-label">Batch Number *</label>
-          <input type="text" id="batch" class="form-input" required placeholder="e.g., BATCH-2024-001">
-          <div class="form-error hidden" id="batchError"></div>
-        </div>
-
-        <div class="form-group">
-          <label for="expiryDate" class="form-label">Expiry Date *</label>
-          <input type="date" id="expiryDate" class="form-input" required>
-          <div class="form-error hidden" id="expiryDateError"></div>
-        </div>
-
-        <div class="flex gap-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="card">
+        <form id="addMedicineForm">
           <div class="form-group">
-            <label for="quantity" class="form-label">Initial Quantity *</label>
-            <input type="number" id="quantity" class="form-input" required min="0" step="1" placeholder="0">
-            <div class="form-error hidden" id="quantityError"></div>
+            <label for="name" class="form-label">Medicine Name *</label>
+            <input
+              type="text"
+              id="name"
+              class="form-input"
+              required
+              placeholder="e.g., Paracetamol 500mg"
+              autocomplete="off"
+            />
+            <div class="form-error hidden" id="nameError"></div>
+            <div
+              id="duplicateWarning"
+              class="message message-info hidden"
+              style="margin-top: 0.5rem"
+            ></div>
           </div>
 
           <div class="form-group">
-            <label for="minThreshold" class="form-label">Minimum Threshold *</label>
-            <input type="number" id="minThreshold" class="form-input" required min="0" step="1" placeholder="0">
-            <small style="color: var(--text-secondary); font-size: 0.75rem;">Alert when stock falls below this</small>
-            <div class="form-error hidden" id="minThresholdError"></div>
+            <label for="batch" class="form-label">Batch Number *</label>
+            <input
+              type="text"
+              id="batch"
+              class="form-input"
+              required
+              placeholder="e.g., BATCH-2024-001"
+            />
+            <div class="form-error hidden" id="batchError"></div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="notes" class="form-label">Notes (Optional)</label>
-          <textarea id="notes" class="form-textarea" placeholder="Any additional information about this medicine..."></textarea>
-        </div>
+          <div class="form-group">
+            <label for="expiryDate" class="form-label">Expiry Date *</label>
+            <input type="date" id="expiryDate" class="form-input" required />
+            <div class="form-error hidden" id="expiryDateError"></div>
+          </div>
 
-        <div id="messageContainer"></div>
+          <div
+            class="flex gap-2"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem"
+          >
+            <div class="form-group">
+              <label for="quantity" class="form-label"
+                >Initial Quantity *</label
+              >
+              <input
+                type="number"
+                id="quantity"
+                class="form-input"
+                required
+                min="0"
+                step="1"
+                placeholder="0"
+              />
+              <div class="form-error hidden" id="quantityError"></div>
+            </div>
 
-        <div class="flex gap-2">
-          <button type="submit" class="btn btn-primary">Save Medicine</button>
-          <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
-        </div>
-      </form>
+            <div class="form-group">
+              <label for="minThreshold" class="form-label"
+                >Minimum Threshold *</label
+              >
+              <input
+                type="number"
+                id="minThreshold"
+                class="form-input"
+                required
+                min="0"
+                step="1"
+                placeholder="0"
+              />
+              <small style="color: var(--text-secondary); font-size: 0.75rem"
+                >Alert when stock falls below this</small
+              >
+              <div class="form-error hidden" id="minThresholdError"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="notes" class="form-label">Notes (Optional)</label>
+            <textarea
+              id="notes"
+              class="form-textarea"
+              placeholder="Any additional information about this medicine..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="category" class="form-label">Category (Optional)</label>
+            <select id="category" class="form-select">
+              <option value="">— Select or leave blank —</option>
+              <option value="Analgesics">Analgesics (Pain Relief)</option>
+              <option value="Antibiotics">Antibiotics</option>
+              <option value="Antiparasitics">Antiparasitics</option>
+              <option value="Antiretrovirals">Antiretrovirals (ARVs)</option>
+              <option value="Cardiovascular">Cardiovascular</option>
+              <option value="Dermatology">Dermatology</option>
+              <option value="Diabetes">Diabetes</option>
+              <option value="Gastrointestinal">Gastrointestinal</option>
+              <option value="Maternal Health">Maternal Health</option>
+              <option value="Nutritional Supplements">
+                Nutritional Supplements
+              </option>
+              <option value="Ophthalmology">Ophthalmology</option>
+              <option value="Respiratory">Respiratory</option>
+              <option value="Vaccines">Vaccines</option>
+              <option value="Other">Other</option>
+            </select>
+            <small style="color: var(--text-secondary); font-size: 0.75rem"
+              >Used for filtering and reporting</small
+            >
+          </div>
+
+          <div id="messageContainer"></div>
+
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">Save Medicine</button>
+            <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
 
-  <!-- Firebase SDK v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  
-  <!-- App Scripts -->
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/inventory.js"></script>
-  
-  <script>
-    // Make findDuplicateMedicine available globally
-    window.findDuplicateMedicine = findDuplicateMedicine;
-    // Set minimum date to today
-    document.getElementById('expiryDate').setAttribute('min', new Date().toISOString().split('T')[0]);
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    // Check if search parameter exists and pre-fill name
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchParam = urlParams.get('search');
-    if (searchParam) {
-      document.getElementById('name').value = decodeURIComponent(searchParam);
-      document.getElementById('name').focus();
-    }
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
 
-    // Check for duplicates as user types (name + batch)
-    let duplicateCheckTimeout;
-    const nameInput = document.getElementById('name');
-    const batchInput = document.getElementById('batch');
-    const duplicateWarning = document.getElementById('duplicateWarning');
+    <script>
+      // Make findDuplicateMedicine available globally
+      window.findDuplicateMedicine = findDuplicateMedicine;
+      // Set minimum date to today
+      document
+        .getElementById("expiryDate")
+        .setAttribute("min", new Date().toISOString().split("T")[0]);
 
-    async function checkForDuplicate() {
-      const name = nameInput.value.trim();
-      const batch = batchInput.value.trim();
-      
-      if (name && batch) {
-        clearTimeout(duplicateCheckTimeout);
-        duplicateCheckTimeout = setTimeout(async () => {
-          const existing = await findDuplicateMedicine(name, batch);
-          if (existing) {
-            duplicateWarning.classList.remove('hidden');
-            duplicateWarning.innerHTML = `
+      // Check if search parameter exists and pre-fill name
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchParam = urlParams.get("search");
+      if (searchParam) {
+        document.getElementById("name").value = decodeURIComponent(searchParam);
+        document.getElementById("name").focus();
+      }
+
+      // Check for duplicates as user types (name + batch)
+      let duplicateCheckTimeout;
+      const nameInput = document.getElementById("name");
+      const batchInput = document.getElementById("batch");
+      const duplicateWarning = document.getElementById("duplicateWarning");
+
+      async function checkForDuplicate() {
+        const name = nameInput.value.trim();
+        const batch = batchInput.value.trim();
+
+        if (name && batch) {
+          clearTimeout(duplicateCheckTimeout);
+          duplicateCheckTimeout = setTimeout(async () => {
+            const existing = await findDuplicateMedicine(name, batch);
+            if (existing) {
+              duplicateWarning.classList.remove("hidden");
+              duplicateWarning.innerHTML = `
               ⚠️ <strong>Duplicate Found:</strong> A medicine with the same name and batch already exists 
               (Current stock: ${existing.quantity}). 
               Clicking "Save" will update the existing record instead of creating a duplicate.
             `;
-          } else {
-            duplicateWarning.classList.add('hidden');
-          }
-        }, 500); // Wait 500ms after user stops typing
-      } else {
-        duplicateWarning.classList.add('hidden');
-      }
-    }
-
-    nameInput.addEventListener('input', checkForDuplicate);
-    batchInput.addEventListener('input', checkForDuplicate);
-
-    // Initialize page
-    async function initPage() {
-      // Wait for auth state to be determined
-      const user = await new Promise((resolve) => {
-        if (auth && auth.currentUser) {
-          resolve(auth.currentUser);
+            } else {
+              duplicateWarning.classList.add("hidden");
+            }
+          }, 500); // Wait 500ms after user stops typing
         } else {
-          auth.onAuthStateChanged((user) => {
-            resolve(user);
-          });
+          duplicateWarning.classList.add("hidden");
         }
-      });
-      
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
       }
 
-      document.getElementById('userEmail').textContent = user.email;
-    }
+      nameInput.addEventListener("input", checkForDuplicate);
+      batchInput.addEventListener("input", checkForDuplicate);
 
-    // Show message
-    function showMessage(message, type = 'info') {
-      const container = document.getElementById('messageContainer');
-      container.innerHTML = `<div class="message message-${type}">${message}</div>`;
-      setTimeout(() => {
-        container.innerHTML = '';
-      }, 5000);
-    }
+      // Initialize page
+      async function initPage() {
+        // Wait for auth state to be determined
+        const user = await new Promise((resolve) => {
+          if (auth && auth.currentUser) {
+            resolve(auth.currentUser);
+          } else {
+            auth.onAuthStateChanged((user) => {
+              resolve(user);
+            });
+          }
+        });
 
-    // Show error
-    function showError(fieldId, message) {
-      const errorEl = document.getElementById(fieldId + 'Error');
-      errorEl.textContent = message;
-      errorEl.classList.remove('hidden');
-    }
-
-    // Clear errors
-    function clearErrors() {
-      document.querySelectorAll('.form-error').forEach(el => {
-        el.classList.add('hidden');
-        el.textContent = '';
-      });
-    }
-
-    // Form submission
-    document.getElementById('addMedicineForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearErrors();
-
-      const medicineData = {
-        name: document.getElementById('name').value.trim(),
-        batch: document.getElementById('batch').value.trim(),
-        expiryDate: document.getElementById('expiryDate').value,
-        quantity: parseInt(document.getElementById('quantity').value),
-        minThreshold: parseInt(document.getElementById('minThreshold').value),
-        notes: document.getElementById('notes').value.trim()
-      };
-
-      // Validation
-      let hasError = false;
-
-      if (!medicineData.name) {
-        showError('name', 'Medicine name is required');
-        hasError = true;
-      }
-
-      if (!medicineData.batch) {
-        showError('batch', 'Batch number is required');
-        hasError = true;
-      }
-
-      if (!medicineData.expiryDate) {
-        showError('expiryDate', 'Expiry date is required');
-        hasError = true;
-      }
-
-      if (isNaN(medicineData.quantity) || medicineData.quantity < 0) {
-        showError('quantity', 'Valid quantity is required');
-        hasError = true;
-      }
-
-      if (isNaN(medicineData.minThreshold) || medicineData.minThreshold < 0) {
-        showError('minThreshold', 'Valid minimum threshold is required');
-        hasError = true;
-      }
-
-      if (hasError) return;
-
-      // Check for duplicate before submitting
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Checking for duplicates...';
-
-      const existingMedicine = await findDuplicateMedicine(medicineData.name, medicineData.batch);
-      
-      if (existingMedicine) {
-        const confirmUpdate = confirm(
-          `A medicine with the same name and batch number already exists:\n\n` +
-          `Name: ${existingMedicine.name}\n` +
-          `Batch: ${existingMedicine.batch}\n` +
-          `Current Stock: ${existingMedicine.quantity}\n\n` +
-          `Would you like to update the existing medicine instead of creating a duplicate?\n\n` +
-          `This will add the new quantity to the existing stock.`
-        );
-
-        if (!confirmUpdate) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Save Medicine';
+        if (!user) {
+          window.location.href = "index.html";
           return;
         }
+
+        document.getElementById("userEmail").textContent = user.email;
       }
 
-      submitBtn.textContent = 'Saving...';
-
-      const result = await addMedicine(medicineData);
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Medicine';
-
-      if (result.success) {
-        if (result.isUpdate) {
-          showMessage(result.message || 'Medicine updated successfully! Redirecting...', 'success');
-        } else {
-          showMessage('Medicine added successfully! Redirecting...', 'success');
-        }
+      // Show message
+      function showMessage(message, type = "info") {
+        const container = document.getElementById("messageContainer");
+        container.innerHTML = `<div class="message message-${type}">${message}</div>`;
         setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 2000);
-      } else {
-        showMessage('Error: ' + result.error, 'error');
+          container.innerHTML = "";
+        }, 5000);
       }
-    });
 
-    initPage();
-  </script>
-</body>
+      // Show error
+      function showError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + "Error");
+        errorEl.textContent = message;
+        errorEl.classList.remove("hidden");
+      }
+
+      // Clear errors
+      function clearErrors() {
+        document.querySelectorAll(".form-error").forEach((el) => {
+          el.classList.add("hidden");
+          el.textContent = "";
+        });
+      }
+
+      // Form submission
+      document
+        .getElementById("addMedicineForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          clearErrors();
+
+          const medicineData = {
+            name: document.getElementById("name").value.trim(),
+            batch: document.getElementById("batch").value.trim(),
+            expiryDate: document.getElementById("expiryDate").value,
+            quantity: parseInt(document.getElementById("quantity").value),
+            minThreshold: parseInt(
+              document.getElementById("minThreshold").value,
+            ),
+            notes: document.getElementById("notes").value.trim(),
+            category: document.getElementById("category").value.trim(),
+          };
+
+          // Validation
+          let hasError = false;
+
+          if (!medicineData.name) {
+            showError("name", "Medicine name is required");
+            hasError = true;
+          }
+
+          if (!medicineData.batch) {
+            showError("batch", "Batch number is required");
+            hasError = true;
+          }
+
+          if (!medicineData.expiryDate) {
+            showError("expiryDate", "Expiry date is required");
+            hasError = true;
+          }
+
+          if (isNaN(medicineData.quantity) || medicineData.quantity < 0) {
+            showError("quantity", "Valid quantity is required");
+            hasError = true;
+          }
+
+          if (
+            isNaN(medicineData.minThreshold) ||
+            medicineData.minThreshold < 0
+          ) {
+            showError("minThreshold", "Valid minimum threshold is required");
+            hasError = true;
+          }
+
+          if (hasError) return;
+
+          // Check for duplicate before submitting
+          const submitBtn = e.target.querySelector('button[type="submit"]');
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Checking for duplicates...";
+
+          const existingMedicine = await findDuplicateMedicine(
+            medicineData.name,
+            medicineData.batch,
+          );
+
+          if (existingMedicine) {
+            const confirmUpdate = confirm(
+              `A medicine with the same name and batch number already exists:\n\n` +
+                `Name: ${existingMedicine.name}\n` +
+                `Batch: ${existingMedicine.batch}\n` +
+                `Current Stock: ${existingMedicine.quantity}\n\n` +
+                `Would you like to update the existing medicine instead of creating a duplicate?\n\n` +
+                `This will add the new quantity to the existing stock.`,
+            );
+
+            if (!confirmUpdate) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Save Medicine";
+              return;
+            }
+          }
+
+          submitBtn.textContent = "Saving...";
+
+          const result = await addMedicine(medicineData);
+
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Save Medicine";
+
+          if (result.success) {
+            if (result.isUpdate) {
+              showMessage(
+                result.message ||
+                  "Medicine updated successfully! Redirecting...",
+                "success",
+              );
+            } else {
+              showMessage(
+                "Medicine added successfully! Redirecting...",
+                "success",
+              );
+            }
+            setTimeout(() => {
+              window.location.href = "dashboard.html";
+            }, 2000);
+          } else {
+            showMessage("Error: " + result.error, "error");
+          }
+        });
+
+      initPage();
+    </script>
+  </body>
 </html>
-

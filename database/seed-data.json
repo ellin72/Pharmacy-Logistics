@@ -9,7 +9,9 @@
       "quantity": 150,
       "minThreshold": 50,
       "status": "in_stock",
-      "notes": "Pain reliever and fever reducer"
+      "category": "Analgesics",
+      "notes": "Pain reliever and fever reducer",
+      "deleted": false
     },
     {
       "name": "Amoxicillin 250mg",
@@ -18,7 +20,9 @@
       "quantity": 25,
       "minThreshold": 30,
       "status": "low_stock",
-      "notes": "Antibiotic - expiring soon, use priority"
+      "category": "Antibiotics",
+      "notes": "Antibiotic - low stock",
+      "deleted": false
     },
     {
       "name": "Ibuprofen 400mg",
@@ -27,8 +31,92 @@
       "quantity": 200,
       "minThreshold": 75,
       "status": "in_stock",
-      "notes": "Anti-inflammatory medication"
+      "category": "Analgesics",
+      "notes": "Anti-inflammatory medication",
+      "deleted": false
+    },
+    {
+      "name": "Artemether-Lumefantrine 20/120mg",
+      "batch": "BATCH-2024-004",
+      "expiryDate": "2025-08-31",
+      "quantity": 80,
+      "minThreshold": 40,
+      "status": "in_stock",
+      "category": "Antiparasitics",
+      "notes": "First-line malaria treatment",
+      "deleted": false
+    },
+    {
+      "name": "Metformin 500mg",
+      "batch": "BATCH-2024-005",
+      "expiryDate": "2026-01-31",
+      "quantity": 60,
+      "minThreshold": 30,
+      "status": "in_stock",
+      "category": "Diabetes",
+      "notes": "Type 2 diabetes management",
+      "deleted": false
+    },
+    {
+      "name": "ORS Sachets",
+      "batch": "BATCH-2024-006",
+      "expiryDate": "2025-09-30",
+      "quantity": 10,
+      "minThreshold": 50,
+      "status": "low_stock",
+      "category": "Gastrointestinal",
+      "notes": "Oral Rehydration Salts — reorder urgently",
+      "deleted": false
+    }
+  ],
+  "emergencyOrders": [
+    {
+      "note": "Sample pending emergency order — replace medicineId with actual Firestore document ID",
+      "medicineId": "REPLACE_WITH_MEDICINE_ID",
+      "medicineName": "Amoxicillin 250mg",
+      "requestedQuantity": 100,
+      "currentStock": 25,
+      "minThreshold": 30,
+      "reason": "Critical shortage — antibiotic needed for admitted patients",
+      "requestedBy": "REPLACE_WITH_USER_UID",
+      "requestedByEmail": "staff@ehafoclinic.com",
+      "status": "pending",
+      "priority": "emergency",
+      "notes": ""
+    },
+    {
+      "note": "Sample approved emergency order",
+      "medicineId": "REPLACE_WITH_MEDICINE_ID",
+      "medicineName": "ORS Sachets",
+      "requestedQuantity": 200,
+      "currentStock": 10,
+      "minThreshold": 50,
+      "reason": "Cholera outbreak risk — emergency stock required immediately",
+      "requestedBy": "REPLACE_WITH_USER_UID",
+      "requestedByEmail": "nurse@ehafoclinic.com",
+      "status": "approved",
+      "priority": "emergency",
+      "notes": "Supplier contacted — awaiting delivery confirmation"
+    }
+  ],
+  "operationalMetricsSnapshots": [
+    {
+      "note": "Sample daily snapshot — document ID should be YYYY-MM-DD format",
+      "date": "2024-01-20",
+      "total": 6,
+      "goodStanding": 3,
+      "lowStock": 2,
+      "expired": 0,
+      "expiringSoon": 1,
+      "outOfStock": 0,
+      "adequate": 3,
+      "goodStandingPct": 50,
+      "lowStockPct": 33,
+      "expiredPct": 0,
+      "expiringSoonPct": 17,
+      "outOfStockPct": 0,
+      "stockAvailPct": 100,
+      "overallOperatingScore": 65
     }
   ]
 }
-

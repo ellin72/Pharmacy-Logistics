@@ -1,245 +1,641 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Pharmacy Logistics System</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="css/styles.css">
-  <script>
-    // Early error handler to suppress browser extension errors
-    (function() {
-      const suppressExtensionErrors = function(e) {
-        if (e && e.message && (
-          e.message.includes('message channel closed') ||
-          e.message.includes('listener indicated an asynchronous response') ||
-          e.message.includes('Extension context invalidated')
-        )) {
-          e.preventDefault();
-          e.stopPropagation();
-          return true;
-        }
-        return false;
-      };
-      
-      window.addEventListener('error', function(e) {
-        if (suppressExtensionErrors(e)) return;
-      }, true);
-      
-      window.addEventListener('unhandledrejection', function(e) {
-        if (e.reason) {
-          const msg = typeof e.reason === 'string' ? e.reason : 
-                     (e.reason.message || String(e.reason));
-          if (msg.includes('message channel closed') ||
-              msg.includes('listener indicated an asynchronous response') ||
-              msg.includes('Extension context invalidated')) {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Pharmacy Logistics System</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script>
+      // Early error handler to suppress browser extension errors
+      (function () {
+        const suppressExtensionErrors = function (e) {
+          if (
+            e &&
+            e.message &&
+            (e.message.includes("message channel closed") ||
+              e.message.includes(
+                "listener indicated an asynchronous response",
+              ) ||
+              e.message.includes("Extension context invalidated"))
+          ) {
             e.preventDefault();
-            return;
+            e.stopPropagation();
+            return true;
           }
-        }
-      });
-    })();
-  </script>
-</head>
-<body>
-  <div class="header">
-    <div class="header-content">
-      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
-      <div class="user-menu">
-        <span class="user-info" id="userEmail"></span>
-        <a href="change-password.html" class="btn btn-secondary btn-sm" title="Change Password">🔑</a>
-        <a href="notifications-settings.html" class="btn btn-secondary btn-sm" title="Notifications">🔔</a>
-        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
-      </div>
-    </div>
-  </div>
+          return false;
+        };
 
-  <div class="container">
-    <div class="dashboard-header">
-      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <h1 class="dashboard-title" style="margin: 0;">Inventory Dashboard</h1>
-        <div id="onlineStatus" style="display: none; padding: 0.5rem 1rem; background: var(--warning-color); color: white; border-radius: 0.375rem; font-size: 0.875rem;">
-          ⚠️ Offline
-        </div>
-        <div id="offlineQueueIndicator" style="display: none; padding: 0.5rem 1rem; background: var(--info-color); color: white; border-radius: 0.375rem; font-size: 0.875rem;">
-          0 queued
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">📋 Order List</a>
-        <a href="add-stock.html" class="btn btn-primary">📦 Add Stock</a>
-        <a href="add-medicine.html" class="btn btn-secondary">+ Add Medicine</a>
-      </div>
-    </div>
+        window.addEventListener(
+          "error",
+          function (e) {
+            if (suppressExtensionErrors(e)) return;
+          },
+          true,
+        );
 
-    <!-- Dashboard Stats -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-        <div>
-          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Medicines</strong>
-          <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);" id="totalMedicines">0</div>
-        </div>
-        <div>
-          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Total Stock Units</strong>
-          <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);" id="totalStock">0</div>
-        </div>
-        <div>
-          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Low Stock Items</strong>
-          <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);" id="lowStockCountBadge">0</div>
-        </div>
-        <div>
-          <strong style="color: var(--text-secondary); font-size: 0.875rem;">Expiring Soon</strong>
-          <div style="font-size: 2rem; font-weight: bold; color: var(--danger-color);" id="expiringSoonCount">0</div>
+        window.addEventListener("unhandledrejection", function (e) {
+          if (e.reason) {
+            const msg =
+              typeof e.reason === "string"
+                ? e.reason
+                : e.reason.message || String(e.reason);
+            if (
+              msg.includes("message channel closed") ||
+              msg.includes("listener indicated an asynchronous response") ||
+              msg.includes("Extension context invalidated")
+            ) {
+              e.preventDefault();
+              return;
+            }
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+        <div class="user-menu">
+          <span class="user-info" id="userEmail"></span>
+          <a
+            href="change-password.html"
+            class="btn btn-secondary btn-sm"
+            title="Change Password"
+            >🔑</a
+          >
+          <a
+            href="notifications-settings.html"
+            class="btn btn-secondary btn-sm"
+            title="Notifications"
+            >🔔</a
+          >
+          <button class="btn btn-secondary btn-sm" onclick="logout()">
+            Log Out
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-        <a href="order-list.html" class="btn btn-warning" style="background: var(--warning-color);">
-          📋 View Order List (<span id="lowStockCount">0</span> items)
-        </a>
-        <a href="transactions.html" class="btn btn-secondary">📊 Transaction History</a>
-        <a href="bulk-operations.html" class="btn btn-secondary">⚡ Bulk Operations</a>
-        <a href="barcode-scanner.html" class="btn btn-secondary">📷 Scanner</a>
-        <a href="seed-medicines.html" id="seedMedicinesLink" class="btn btn-secondary" style="display: none;">🌱 Seed Medicines</a>
-        <button onclick="exportInventory()" class="btn btn-secondary">📥 Export</button>
-        <button onclick="printInventory()" class="btn btn-secondary">🖨️ Print</button>
-      </div>
-    </div>
-
-    <!-- Alerts Panel -->
-    <div class="card alerts-panel">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <h2 class="card-title" style="margin: 0;">⚠️ Alerts</h2>
-          <span id="alertCount" class="badge">0 alerts</span>
+    <div class="container">
+      <div class="dashboard-header">
+        <div
+          style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap"
+        >
+          <h1 class="dashboard-title" style="margin: 0">Inventory Dashboard</h1>
+          <div
+            id="onlineStatus"
+            style="
+              display: none;
+              padding: 0.5rem 1rem;
+              background: var(--warning-color);
+              color: white;
+              border-radius: 0.375rem;
+              font-size: 0.875rem;
+            "
+          >
+            ⚠️ Offline
+          </div>
+          <div
+            id="offlineQueueIndicator"
+            style="
+              display: none;
+              padding: 0.5rem 1rem;
+              background: var(--info-color);
+              color: white;
+              border-radius: 0.375rem;
+              font-size: 0.875rem;
+            "
+          >
+            0 queued
+          </div>
         </div>
-        <button id="resolveAllBtn" class="btn btn-sm btn-primary" onclick="resolveAllAlertsClick()" style="display: none;">
-          ✅ Resolve All
-        </button>
-      </div>
-      <div id="alertsContainer">
-        <div class="loading">Loading alerts...</div>
-      </div>
-    </div>
-
-    <!-- Filters and Search -->
-    <div class="card">
-      <div class="filters" id="filtersContainer">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="expired">Expired</button>
-        <button class="filter-btn" data-filter="expiring_soon">Expiring Soon</button>
-        <button class="filter-btn" data-filter="low_stock">Low Stock</button>
-        <button class="filter-btn" data-filter="in_stock">In Stock</button>
-      </div>
-      
-      <div class="search-box">
-        <div style="position: relative; display: flex; align-items: center;">
-          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name or batch number..." autocomplete="off">
-          <button id="clearSearchBtn" class="btn btn-sm btn-secondary" onclick="clearSearch()" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.5rem;">✕ Clear</button>
+        <div class="flex gap-2">
+          <a
+            href="order-list.html"
+            class="btn btn-warning"
+            style="background: var(--warning-color)"
+            >📋 Order List</a
+          >
+          <a href="emergency-orders.html" class="btn btn-danger"
+            >🚨 Emergency</a
+          >
+          <a href="add-stock.html" class="btn btn-primary">📦 Add Stock</a>
+          <a href="add-medicine.html" class="btn btn-secondary"
+            >+ Add Medicine</a
+          >
         </div>
-        <div id="searchResultsInfo" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); display: none;"></div>
+      </div>
+
+      <!-- Dashboard Stats -->
+      <div class="card" style="margin-bottom: 1.5rem">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+          "
+        >
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem"
+              >Total Medicines</strong
+            >
+            <div
+              style="
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--primary-color);
+              "
+              id="totalMedicines"
+            >
+              0
+            </div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem"
+              >Total Stock Units</strong
+            >
+            <div
+              style="
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--success-color);
+              "
+              id="totalStock"
+            >
+              0
+            </div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem"
+              >Low Stock Items</strong
+            >
+            <div
+              style="
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--warning-color);
+              "
+              id="lowStockCountBadge"
+            >
+              0
+            </div>
+          </div>
+          <div>
+            <strong style="color: var(--text-secondary); font-size: 0.875rem"
+              >Expiring Soon</strong
+            >
+            <div
+              style="
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--danger-color);
+              "
+              id="expiringSoonCount"
+            >
+              0
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card" style="margin-bottom: 1.5rem">
+        <div
+          style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center"
+        >
+          <a
+            href="order-list.html"
+            class="btn btn-warning"
+            style="background: var(--warning-color)"
+          >
+            📋 View Order List (<span id="lowStockCount">0</span> items)
+          </a>
+          <a href="emergency-orders.html" class="btn btn-danger"
+            >🚨 Emergency Orders
+            <span
+              id="pendingEOBadge"
+              class="badge"
+              style="
+                background: white;
+                color: #ef4444;
+                margin-left: 0.25rem;
+                display: none;
+              "
+              >0</span
+            ></a
+          >
+          <a href="transactions.html" class="btn btn-secondary"
+            >📊 Transaction History</a
+          >
+          <a href="bulk-operations.html" class="btn btn-secondary"
+            >⚡ Bulk Operations</a
+          >
+          <a href="barcode-scanner.html" class="btn btn-secondary"
+            >📷 Scanner</a
+          >
+          <a
+            href="seed-medicines.html"
+            id="seedMedicinesLink"
+            class="btn btn-secondary"
+            style="display: none"
+            >🌱 Seed Medicines</a
+          >
+          <button onclick="exportInventory()" class="btn btn-secondary">
+            📥 Export
+          </button>
+          <button onclick="printInventory()" class="btn btn-secondary">
+            🖨️ Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Operating Metrics Section -->
+      <div class="card" id="metricsCard" style="margin-bottom: 1.5rem">
+        <div
+          class="card-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          "
+        >
+          <h2 class="card-title" style="margin: 0">📊 Operating Metrics</h2>
+          <div
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <select
+              id="metricsCategoryFilter"
+              class="form-select"
+              style="font-size: 0.8rem; padding: 0.3rem 0.5rem"
+              onchange="refreshMetrics()"
+            >
+              <option value="all">All Categories</option>
+            </select>
+            <select
+              id="metricsStatusFilter"
+              class="form-select"
+              style="font-size: 0.8rem; padding: 0.3rem 0.5rem"
+              onchange="refreshMetrics()"
+            >
+              <option value="all">All Statuses</option>
+              <option value="in_stock">In Stock</option>
+              <option value="low_stock">Low Stock</option>
+              <option value="expiring_soon">Expiring Soon</option>
+              <option value="expired">Expired</option>
+            </select>
+            <button onclick="refreshMetrics()" class="btn btn-sm btn-secondary">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+        <div id="metricsContainer">
+          <div class="loading">Loading metrics...</div>
+        </div>
+      </div>
+
+      <!-- Alerts Panel -->
+      <div class="card alerts-panel">
+        <div
+          class="card-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 0.5rem">
+            <h2 class="card-title" style="margin: 0">⚠️ Alerts</h2>
+            <span id="alertCount" class="badge">0 alerts</span>
+          </div>
+          <button
+            id="resolveAllBtn"
+            class="btn btn-sm btn-primary"
+            onclick="resolveAllAlertsClick()"
+            style="display: none"
+          >
+            ✅ Resolve All
+          </button>
+        </div>
+        <div id="alertsContainer">
+          <div class="loading">Loading alerts...</div>
+        </div>
+      </div>
+
+      <!-- Filters and Search -->
+      <div class="card">
+        <div class="filters" id="filtersContainer">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="expired">Expired</button>
+          <button class="filter-btn" data-filter="expiring_soon">
+            Expiring Soon
+          </button>
+          <button class="filter-btn" data-filter="low_stock">Low Stock</button>
+          <button class="filter-btn" data-filter="in_stock">In Stock</button>
+        </div>
+
+        <div class="search-box">
+          <div style="position: relative; display: flex; align-items: center">
+            <input
+              type="text"
+              id="searchInput"
+              class="search-input"
+              placeholder="🔍 Search by name or batch number..."
+              autocomplete="off"
+            />
+            <button
+              id="clearSearchBtn"
+              class="btn btn-sm btn-secondary"
+              onclick="clearSearch()"
+              style="
+                display: none;
+                margin-left: 0.5rem;
+                padding: 0.25rem 0.5rem;
+              "
+            >
+              ✕ Clear
+            </button>
+          </div>
+          <div
+            id="searchResultsInfo"
+            style="
+              margin-top: 0.5rem;
+              font-size: 0.875rem;
+              color: var(--text-secondary);
+              display: none;
+            "
+          ></div>
+        </div>
+      </div>
+
+      <!-- Inventory Table -->
+      <div class="card">
+        <div
+          class="card-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          "
+        >
+          <h2 class="card-title">Medicines Inventory</h2>
+          <div
+            id="adminBulkHint"
+            style="
+              display: none;
+              font-size: 0.8rem;
+              color: var(--text-secondary);
+            "
+          >
+            Tick checkboxes to select medicines for bulk actions
+          </div>
+        </div>
+
+        <!-- Bulk Actions Toolbar -->
+        <div id="bulkToolbar" class="bulk-toolbar">
+          <span id="bulkSelectionCount">0 selected</span>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+            <button
+              onclick="handleBulkEmergencyOrder()"
+              class="btn btn-sm btn-warning"
+            >
+              🚨 Emergency Order Selected
+            </button>
+            <button
+              onclick="showBulkDeleteModal()"
+              class="btn btn-sm btn-danger"
+            >
+              🗑️ Delete Selected
+            </button>
+            <button
+              onclick="clearBulkSelection()"
+              class="btn btn-sm btn-secondary"
+            >
+              ✕ Clear Selection
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th
+                  class="checkbox-col"
+                  id="checkboxColHeader"
+                  style="display: none"
+                >
+                  <input
+                    type="checkbox"
+                    id="selectAllCheckbox"
+                    title="Select all visible"
+                    onchange="toggleSelectAll(this.checked)"
+                  />
+                </th>
+                <th>Name</th>
+                <th>Batch Number</th>
+                <th>Quantity</th>
+                <th>Min Threshold</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody">
+              <tr>
+                <td colspan="8" class="text-center">
+                  <div class="loading">Loading inventory...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Inventory Table -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Medicines Inventory</h2>
-      </div>
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Batch Number</th>
-              <th>Quantity</th>
-              <th>Min Threshold</th>
-              <th>Expiry Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTableBody">
-            <tr>
-              <td colspan="7" class="text-center">
-                <div class="loading">Loading inventory...</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Bulk Delete Confirmation Modal -->
+    <div
+      id="bulkDeleteModal"
+      class="modal-overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulkDeleteTitle"
+    >
+      <div class="modal-box">
+        <h3 class="modal-title" id="bulkDeleteTitle">🗑️ Confirm Bulk Delete</h3>
+        <div class="modal-body">
+          <p>
+            You are about to delete
+            <strong id="bulkDeleteCount">0</strong> medicine(s):
+          </p>
+          <div class="modal-medicine-list" id="bulkDeleteMedicineList"></div>
+          <div id="bulkDeleteWarningBox" class="modal-warning-box">
+            ⚠️ This action is irreversible. Medicines will be soft-deleted and
+            removed from all views.
+          </div>
+          <input
+            type="text"
+            id="bulkDeleteConfirmInput"
+            class="confirm-delete-input"
+            placeholder='Type "DELETE" to confirm'
+            autocomplete="off"
+            style="display: none"
+          />
+        </div>
+        <div class="modal-actions">
+          <button
+            id="bulkDeleteConfirmBtn"
+            onclick="executeBulkDelete()"
+            class="btn btn-danger"
+          >
+            Delete
+          </button>
+          <button onclick="closeBulkDeleteModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Firebase SDK v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  
-  <!-- App Scripts -->
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/alerts.js"></script>
-  <script src="js/users.js"></script>
-  <script src="js/reports.js"></script>
-  <script src="js/notifications.js"></script>
-  <script src="js/offline.js"></script>
-  <script src="js/indexeddb.js"></script>
-  <script src="js/mobile.js"></script>
-  <script src="js/conflict-resolution.js"></script>
-  
-  <script>
-    let currentFilter = 'all';
-    let allMedicines = [];
-    let filteredMedicines = [];
-    let medicinesUnsubscribe = null;
-    let alertsUnsubscribe = null;
-    let currentAlerts = []; // Store current alerts to avoid race conditions
+    <!-- Emergency Order Modal -->
+    <div
+      id="emergencyOrderModal"
+      class="modal-overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="eoModalTitle"
+    >
+      <div class="modal-box">
+        <h3 class="modal-title" id="eoModalTitle">🚨 Create Emergency Order</h3>
+        <div class="modal-body">
+          <p>
+            Creating emergency orders for
+            <strong id="eoMedicineCount">0</strong> selected medicine(s):
+          </p>
+          <div class="modal-medicine-list" id="eoMedicineList"></div>
+          <div style="margin-top: 1rem">
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.3rem"
+              >Reason for Emergency Order
+              <span style="color: red">*</span></label
+            >
+            <textarea
+              id="eoReason"
+              style="
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid var(--border-color);
+                border-radius: 0.375rem;
+                font-size: 0.9rem;
+                min-height: 80px;
+                resize: vertical;
+              "
+              placeholder="Describe why this is an emergency order..."
+            ></textarea>
+            <div
+              id="eoReasonError"
+              style="
+                color: var(--danger-color);
+                font-size: 0.8rem;
+                display: none;
+                margin-top: 0.25rem;
+              "
+            ></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button
+            onclick="submitEmergencyOrders()"
+            class="btn btn-danger"
+            id="eoSubmitBtn"
+          >
+            Submit Emergency Orders
+          </button>
+          <button onclick="closeEOModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
 
-    // Format date for display
-    function formatDate(date) {
-      if (!date) return 'N/A';
-      return new Date(date).toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    }
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    // Get status badge class
-    function getStatusBadge(status) {
-      const badges = {
-        'in_stock': 'badge-in-stock',
-        'low_stock': 'badge-low-stock',
-        'expiring_soon': 'badge-expiring-soon',
-        'expired': 'badge-expired'
-      };
-      return badges[status] || '';
-    }
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/alerts.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/offline.js"></script>
+    <script src="js/indexeddb.js"></script>
+    <script src="js/mobile.js"></script>
+    <script src="js/conflict-resolution.js"></script>
+    <script src="js/metrics.js"></script>
+    <script src="js/emergency-orders.js"></script>
 
-    // Get status label
-    function getStatusLabel(status) {
-      const labels = {
-        'in_stock': 'In Stock',
-        'low_stock': 'Low Stock',
-        'expiring_soon': 'Expiring Soon',
-        'expired': 'Expired'
-      };
-      return labels[status] || status;
-    }
+    <script>
+      let currentFilter = "all";
+      let allMedicines = [];
+      let filteredMedicines = [];
+      let medicinesUnsubscribe = null;
+      let alertsUnsubscribe = null;
+      let currentAlerts = []; // Store current alerts to avoid race conditions
 
-    // Render inventory table
-    function renderInventory(medicines) {
-      const tbody = document.getElementById('inventoryTableBody');
-      
-      if (medicines.length === 0) {
-        tbody.innerHTML = `
+      // Format date for display
+      function formatDate(date) {
+        if (!date) return "N/A";
+        return new Date(date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      // Get status badge class
+      function getStatusBadge(status) {
+        const badges = {
+          in_stock: "badge-in-stock",
+          low_stock: "badge-low-stock",
+          expiring_soon: "badge-expiring-soon",
+          expired: "badge-expired",
+        };
+        return badges[status] || "";
+      }
+
+      // Get status label
+      function getStatusLabel(status) {
+        const labels = {
+          in_stock: "In Stock",
+          low_stock: "Low Stock",
+          expiring_soon: "Expiring Soon",
+          expired: "Expired",
+        };
+        return labels[status] || status;
+      }
+
+      // Render inventory table
+      function renderInventory(medicines) {
+        const tbody = document.getElementById("inventoryTableBody");
+
+        if (medicines.length === 0) {
+          tbody.innerHTML = `
           <tr>
-            <td colspan="7" class="text-center">
+            <td colspan="8" class="text-center">
               <div class="empty-state">
                 <div class="empty-state-icon">📦</div>
                 <p>No medicines found. <a href="add-medicine.html">Add your first medicine</a></p>
@@ -247,31 +643,50 @@
             </td>
           </tr>
         `;
-        return;
-      }
+          return;
+        }
 
-      const isAdmin = window.currentUserRole === 'admin';
-      const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-      
-      // Highlight matching text if searching
-      const highlightMatch = (text, term) => {
-        if (!term) return escapeHtml(text);
-        const escaped = escapeHtml(text);
-        const regex = new RegExp(`(${escapeHtml(term)})`, 'gi');
-        return escaped.replace(regex, '<mark style="background: #fef3c7; padding: 2px 4px; border-radius: 3px;">$1</mark>');
-      };
-      
-      tbody.innerHTML = medicines.map(med => {
-        const deleteBtn = isAdmin ? 
-          `<button onclick="handleDeleteMedicine('${med.id}', '${escapeHtml(med.name)}')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;">Delete</button>` : 
-          '';
-        
-        const isExpired = med.status === 'expired';
-        const rowClass = isExpired ? 'expired-row' : '';
-        const expiryDateClass = isExpired ? 'expired-date' : '';
-        
-        return `
+        const isAdmin = window.currentUserRole === "admin";
+        const searchTerm = document
+          .getElementById("searchInput")
+          .value.trim()
+          .toLowerCase();
+
+        // Highlight matching text if searching
+        const highlightMatch = (text, term) => {
+          if (!term) return escapeHtml(text);
+          const escaped = escapeHtml(text);
+          const regex = new RegExp(`(${escapeHtml(term)})`, "gi");
+          return escaped.replace(
+            regex,
+            '<mark style="background: #fef3c7; padding: 2px 4px; border-radius: 3px;">$1</mark>',
+          );
+        };
+
+        tbody.innerHTML = medicines
+          .map((med) => {
+            const deleteBtn = isAdmin
+              ? `<button onclick="handleDeleteMedicine('${med.id}', '${escapeHtml(med.name)}')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;">Delete</button>`
+              : "";
+
+            const isExpired = med.status === "expired";
+            const isSelected =
+              typeof selectedMedicineIds !== "undefined" &&
+              selectedMedicineIds.has(med.id);
+            const rowClass = [
+              isExpired ? "expired-row" : "",
+              isSelected ? "row-selected" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            const expiryDateClass = isExpired ? "expired-date" : "";
+            const checkboxCell = isAdmin
+              ? `<td class="checkbox-col"><input type="checkbox" class="row-checkbox" ${isSelected ? "checked" : ""} onchange="toggleMedicineSelection('${med.id}', this.checked)" title="Select for bulk action"></td>`
+              : "";
+
+            return `
         <tr class="${rowClass}">
+          ${checkboxCell}
           <td><strong>${highlightMatch(med.name, searchTerm)}</strong></td>
           <td>${highlightMatch(med.batch, searchTerm)}</td>
           <td>${med.quantity}</td>
@@ -284,78 +699,81 @@
           </td>
         </tr>
       `;
-      }).join('');
-    }
-
-    // Sort table
-    function sortTable(column) {
-      if (sortColumn === column) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        sortColumn = column;
-        sortDirection = 'asc';
+          })
+          .join("");
       }
-      
-      const medicines = filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
-      const sorted = [...medicines].sort((a, b) => {
-        let aVal = a[column];
-        let bVal = b[column];
-        
-        if (column === 'expiryDate') {
-          aVal = aVal ? new Date(aVal).getTime() : 0;
-          bVal = bVal ? new Date(bVal).getTime() : 0;
-        } else if (typeof aVal === 'string') {
-          aVal = aVal.toLowerCase();
-          bVal = bVal.toLowerCase();
-        }
-        
-        if (sortDirection === 'asc') {
-          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+
+      // Sort table
+      function sortTable(column) {
+        if (sortColumn === column) {
+          sortDirection = sortDirection === "asc" ? "desc" : "asc";
         } else {
-          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+          sortColumn = column;
+          sortDirection = "asc";
         }
-      });
-      
-      renderInventory(sorted);
-    }
 
-    // Filter medicines
-    function filterMedicines() {
-      let filtered = [...allMedicines];
-      const searchInput = document.getElementById('searchInput');
-      const clearBtn = document.getElementById('clearSearchBtn');
-      const resultsInfo = document.getElementById('searchResultsInfo');
-      const searchTerm = searchInput.value.trim().toLowerCase();
+        const medicines =
+          filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
+        const sorted = [...medicines].sort((a, b) => {
+          let aVal = a[column];
+          let bVal = b[column];
 
-      // Show/hide clear button
-      if (searchTerm) {
-        clearBtn.style.display = 'inline-block';
-      } else {
-        clearBtn.style.display = 'none';
-        resultsInfo.style.display = 'none';
+          if (column === "expiryDate") {
+            aVal = aVal ? new Date(aVal).getTime() : 0;
+            bVal = bVal ? new Date(bVal).getTime() : 0;
+          } else if (typeof aVal === "string") {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+          }
+
+          if (sortDirection === "asc") {
+            return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+          } else {
+            return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+          }
+        });
+
+        renderInventory(sorted);
       }
 
-      // Filter out medicines with quantity = 0 (only show medicines in stock)
-      filtered = filtered.filter(med => (med.quantity || 0) > 0);
+      // Filter medicines
+      function filterMedicines() {
+        let filtered = [...allMedicines];
+        const searchInput = document.getElementById("searchInput");
+        const clearBtn = document.getElementById("clearSearchBtn");
+        const resultsInfo = document.getElementById("searchResultsInfo");
+        const searchTerm = searchInput.value.trim().toLowerCase();
 
-      // Apply status filter
-      if (currentFilter !== 'all') {
-        filtered = filtered.filter(med => med.status === currentFilter);
-      }
+        // Show/hide clear button
+        if (searchTerm) {
+          clearBtn.style.display = "inline-block";
+        } else {
+          clearBtn.style.display = "none";
+          resultsInfo.style.display = "none";
+        }
 
-      // Apply search filter
-      if (searchTerm) {
-        const beforeSearch = filtered.length;
-        filtered = filtered.filter(med => 
-          med.name.toLowerCase().includes(searchTerm) || 
-          med.batch.toLowerCase().includes(searchTerm)
-        );
-        
-        // Show search results info
-        if (filtered.length === 0) {
-          resultsInfo.style.display = 'block';
-          const searchValue = escapeHtml(searchInput.value);
-          resultsInfo.innerHTML = `
+        // Filter out medicines with quantity = 0 (only show medicines in stock)
+        filtered = filtered.filter((med) => (med.quantity || 0) > 0);
+
+        // Apply status filter
+        if (currentFilter !== "all") {
+          filtered = filtered.filter((med) => med.status === currentFilter);
+        }
+
+        // Apply search filter
+        if (searchTerm) {
+          const beforeSearch = filtered.length;
+          filtered = filtered.filter(
+            (med) =>
+              med.name.toLowerCase().includes(searchTerm) ||
+              med.batch.toLowerCase().includes(searchTerm),
+          );
+
+          // Show search results info
+          if (filtered.length === 0) {
+            resultsInfo.style.display = "block";
+            const searchValue = escapeHtml(searchInput.value);
+            resultsInfo.innerHTML = `
             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
               <span style="color: var(--warning-color);">No results found for "${searchValue}"</span>
               <a href="add-stock.html" class="btn btn-sm btn-primary">
@@ -363,60 +781,73 @@
               </a>
             </div>
           `;
-        } else if (beforeSearch > filtered.length) {
-          resultsInfo.style.display = 'block';
-          resultsInfo.innerHTML = `Showing <strong>${filtered.length}</strong> of <strong>${beforeSearch}</strong> items`;
-        } else {
-          resultsInfo.style.display = 'block';
-          resultsInfo.innerHTML = `Found <strong>${filtered.length}</strong> item${filtered.length !== 1 ? 's' : ''}`;
+          } else if (beforeSearch > filtered.length) {
+            resultsInfo.style.display = "block";
+            resultsInfo.innerHTML = `Showing <strong>${filtered.length}</strong> of <strong>${beforeSearch}</strong> items`;
+          } else {
+            resultsInfo.style.display = "block";
+            resultsInfo.innerHTML = `Found <strong>${filtered.length}</strong> item${filtered.length !== 1 ? "s" : ""}`;
+          }
         }
+
+        filteredMedicines = filtered;
+        renderInventory(filtered);
       }
 
-      filteredMedicines = filtered;
-      renderInventory(filtered);
-    }
-
-    // Clear search
-    function clearSearch() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('clearSearchBtn').style.display = 'none';
-      document.getElementById('searchResultsInfo').style.display = 'none';
-      filterMedicines();
-      document.getElementById('searchInput').focus();
-    }
-
-    // Render alerts
-    function renderAlerts(alerts) {
-      const container = document.getElementById('alertsContainer');
-      const countEl = document.getElementById('alertCount');
-      const resolveAllBtn = document.getElementById('resolveAllBtn');
-      
-      // Store current alerts to avoid race conditions
-      // This ensures resolveAllAlertsClick() uses the alerts the user actually sees
-      currentAlerts = alerts;
-      
-      countEl.textContent = `${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
-
-      // Show/hide "Resolve All" button based on alerts count
-      if (resolveAllBtn) {
-        resolveAllBtn.style.display = alerts.length > 0 ? 'block' : 'none';
+      // Clear search
+      function clearSearch() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("clearSearchBtn").style.display = "none";
+        document.getElementById("searchResultsInfo").style.display = "none";
+        filterMedicines();
+        document.getElementById("searchInput").focus();
       }
 
-      if (alerts.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No active alerts. All medicines are in good condition! ✅</p></div>';
-        return;
-      }
+      // Render alerts
+      function renderAlerts(alerts) {
+        const container = document.getElementById("alertsContainer");
+        const countEl = document.getElementById("alertCount");
+        const resolveAllBtn = document.getElementById("resolveAllBtn");
 
-      container.innerHTML = alerts.map(alert => {
-        const alertClass = alert.type === 'expired' ? 'expired' : 
-                          alert.type === 'expiry_soon' ? 'expiry-soon' : 'low-stock';
-        const icon = alert.type === 'expired' ? '🚨' : 
-                    alert.type === 'expiry_soon' ? '⚠️' : '📉';
-        const message = alert.type === 'expired' ? 'This medicine has expired' :
-                       alert.type === 'expiry_soon' ? `Expires on ${formatDate(alert.dueOn)}` :
-                       'Stock is below minimum threshold';
+        // Store current alerts to avoid race conditions
+        // This ensures resolveAllAlertsClick() uses the alerts the user actually sees
+        currentAlerts = alerts;
 
-        return `
+        countEl.textContent = `${alerts.length} alert${alerts.length !== 1 ? "s" : ""}`;
+
+        // Show/hide "Resolve All" button based on alerts count
+        if (resolveAllBtn) {
+          resolveAllBtn.style.display = alerts.length > 0 ? "block" : "none";
+        }
+
+        if (alerts.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><p>No active alerts. All medicines are in good condition! ✅</p></div>';
+          return;
+        }
+
+        container.innerHTML = alerts
+          .map((alert) => {
+            const alertClass =
+              alert.type === "expired"
+                ? "expired"
+                : alert.type === "expiry_soon"
+                  ? "expiry-soon"
+                  : "low-stock";
+            const icon =
+              alert.type === "expired"
+                ? "🚨"
+                : alert.type === "expiry_soon"
+                  ? "⚠️"
+                  : "📉";
+            const message =
+              alert.type === "expired"
+                ? "This medicine has expired"
+                : alert.type === "expiry_soon"
+                  ? `Expires on ${formatDate(alert.dueOn)}`
+                  : "Stock is below minimum threshold";
+
+            return `
           <div class="alert-item ${alertClass}">
             <div class="alert-content">
               <div class="alert-title">${icon} ${escapeHtml(alert.medicineName)}</div>
@@ -425,227 +856,265 @@
             <button class="btn btn-sm btn-secondary" onclick="resolveAlertClick('${alert.id}')">Resolve</button>
           </div>
         `;
-      }).join('');
-    }
-
-    // Resolve alert
-    async function resolveAlertClick(alertId) {
-      const result = await resolveAlert(alertId);
-      if (result.success) {
-        // Alert will be removed automatically via real-time listener
-      } else {
-        alert('Failed to resolve alert: ' + result.error);
-      }
-    }
-
-    // Resolve all alerts
-    async function resolveAllAlertsClick() {
-      const resolveAllBtn = document.getElementById('resolveAllBtn');
-      
-      // Use current alerts from real-time subscription to avoid race conditions
-      // This ensures we're resolving the alerts the user actually sees
-      const alertsToResolve = [...currentAlerts];
-      const actualCount = alertsToResolve.length;
-
-      if (actualCount === 0) {
-        return;
+          })
+          .join("");
       }
 
-      // Check if function is available
-      const resolveAllFn = typeof resolveAllAlerts !== 'undefined' ? resolveAllAlerts : 
-                           (typeof window !== 'undefined' && window.resolveAllAlerts) ? window.resolveAllAlerts : null;
-      
-      if (!resolveAllFn) {
-        alert('Error: Resolve All function is not available. Please refresh the page.');
-        console.error('resolveAllAlerts function not found');
-        return;
-      }
-
-      // Confirm action with actual count
-      const confirmed = confirm(`Are you sure you want to resolve all ${actualCount} alert${actualCount !== 1 ? 's' : ''}?`);
-      if (!confirmed) {
-        return;
-      }
-
-      // Disable button and show loading state
-      if (resolveAllBtn) {
-        resolveAllBtn.disabled = true;
-        resolveAllBtn.textContent = 'Resolving...';
-      }
-
-      try {
-        // Pass the current alerts to avoid re-fetching and race conditions
-        const result = await resolveAllFn(alertsToResolve);
-        
+      // Resolve alert
+      async function resolveAlertClick(alertId) {
+        const result = await resolveAlert(alertId);
         if (result.success) {
-          // Show success message
-          if (typeof showInAppNotification === 'function') {
-            showInAppNotification(
-              `✅ Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? 's' : ''}`,
-              'success',
-              3000
-            );
-          } else {
-            alert(result.message || `Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? 's' : ''}`);
-          }
-          // Alerts will be removed automatically via real-time listener
-          // Button will be hidden automatically when alerts list updates
-          // But re-enable it in case listener hasn't updated yet
-          if (resolveAllBtn) {
-            resolveAllBtn.disabled = false;
-            resolveAllBtn.textContent = '✅ Resolve All';
-          }
+          // Alert will be removed automatically via real-time listener
         } else {
-          alert('Failed to resolve alerts: ' + result.error);
+          alert("Failed to resolve alert: " + result.error);
+        }
+      }
+
+      // Resolve all alerts
+      async function resolveAllAlertsClick() {
+        const resolveAllBtn = document.getElementById("resolveAllBtn");
+
+        // Use current alerts from real-time subscription to avoid race conditions
+        // This ensures we're resolving the alerts the user actually sees
+        const alertsToResolve = [...currentAlerts];
+        const actualCount = alertsToResolve.length;
+
+        if (actualCount === 0) {
+          return;
+        }
+
+        // Check if function is available
+        const resolveAllFn =
+          typeof resolveAllAlerts !== "undefined"
+            ? resolveAllAlerts
+            : typeof window !== "undefined" && window.resolveAllAlerts
+              ? window.resolveAllAlerts
+              : null;
+
+        if (!resolveAllFn) {
+          alert(
+            "Error: Resolve All function is not available. Please refresh the page.",
+          );
+          console.error("resolveAllAlerts function not found");
+          return;
+        }
+
+        // Confirm action with actual count
+        const confirmed = confirm(
+          `Are you sure you want to resolve all ${actualCount} alert${actualCount !== 1 ? "s" : ""}?`,
+        );
+        if (!confirmed) {
+          return;
+        }
+
+        // Disable button and show loading state
+        if (resolveAllBtn) {
+          resolveAllBtn.disabled = true;
+          resolveAllBtn.textContent = "Resolving...";
+        }
+
+        try {
+          // Pass the current alerts to avoid re-fetching and race conditions
+          const result = await resolveAllFn(alertsToResolve);
+
+          if (result.success) {
+            // Show success message
+            if (typeof showInAppNotification === "function") {
+              showInAppNotification(
+                `✅ Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? "s" : ""}`,
+                "success",
+                3000,
+              );
+            } else {
+              alert(
+                result.message ||
+                  `Successfully resolved ${result.resolved} alert${result.resolved !== 1 ? "s" : ""}`,
+              );
+            }
+            // Alerts will be removed automatically via real-time listener
+            // Button will be hidden automatically when alerts list updates
+            // But re-enable it in case listener hasn't updated yet
+            if (resolveAllBtn) {
+              resolveAllBtn.disabled = false;
+              resolveAllBtn.textContent = "✅ Resolve All";
+            }
+          } else {
+            alert("Failed to resolve alerts: " + result.error);
+            // Re-enable button on error
+            if (resolveAllBtn) {
+              resolveAllBtn.disabled = false;
+              resolveAllBtn.textContent = "✅ Resolve All";
+            }
+          }
+        } catch (error) {
+          console.error("Error in resolveAllAlertsClick:", error);
+          alert("An error occurred while resolving alerts. Please try again.");
           // Re-enable button on error
           if (resolveAllBtn) {
             resolveAllBtn.disabled = false;
-            resolveAllBtn.textContent = '✅ Resolve All';
+            resolveAllBtn.textContent = "✅ Resolve All";
           }
         }
-      } catch (error) {
-        console.error('Error in resolveAllAlertsClick:', error);
-        alert('An error occurred while resolving alerts. Please try again.');
-        // Re-enable button on error
-        if (resolveAllBtn) {
-          resolveAllBtn.disabled = false;
-          resolveAllBtn.textContent = '✅ Resolve All';
+      }
+
+      // Handle delete medicine (admin only — soft-delete)
+      async function handleDeleteMedicine(medicineId, medicineName) {
+        const isAdmin = window.currentUserRole === "admin";
+
+        if (!isAdmin) {
+          alert(
+            "You do not have permission to delete medicines. Only admins can delete.",
+          );
+          return;
+        }
+
+        const confirmDelete = confirm(
+          `Are you sure you want to delete "${medicineName}"?\n\nThe medicine will be soft-deleted (removed from all views but preserved for audit).`,
+        );
+
+        if (!confirmDelete) {
+          return;
+        }
+
+        const result = await softDeleteMedicine(medicineId);
+
+        if (result.success) {
+          if (typeof showInAppNotification === "function") {
+            showInAppNotification(
+              `✅ "${medicineName}" has been deleted.`,
+              "success",
+              4000,
+            );
+          } else {
+            alert("Medicine deleted successfully.");
+          }
+          // Table will update automatically via real-time listener
+        } else {
+          alert("Error: " + result.error);
         }
       }
-    }
 
-    // Handle delete medicine (admin only)
-    async function handleDeleteMedicine(medicineId, medicineName) {
-      const isAdmin = window.currentUserRole === 'admin';
-      
-      if (!isAdmin) {
-        alert('You do not have permission to delete medicines. Only admins can delete.');
-        return;
+      // Update dashboard statistics
+      function updateDashboardStats(medicines) {
+        // Update low stock count
+        const lowStockCount = medicines.filter(
+          (m) => m.status === "low_stock" || m.quantity <= m.minThreshold,
+        ).length;
+        const lowStockCountEl = document.getElementById("lowStockCount");
+        if (lowStockCountEl) {
+          lowStockCountEl.textContent = lowStockCount;
+        }
+
+        // Update expired count (ensure it's visible)
+        const expiredCount = medicines.filter(
+          (m) => m.status === "expired",
+        ).length;
+        const expiredCountEl = document.getElementById("expiredCount");
+        if (expiredCountEl) {
+          expiredCountEl.textContent = expiredCount;
+        }
+
+        // Update stats badges
+        const totalMedicinesEl = document.getElementById("totalMedicines");
+        const totalStockEl = document.getElementById("totalStock");
+        const lowStockBadgeEl = document.getElementById("lowStockCountBadge");
+        const expiringSoonEl = document.getElementById("expiringSoonCount");
+
+        if (totalMedicinesEl) totalMedicinesEl.textContent = medicines.length;
+        if (totalStockEl)
+          totalStockEl.textContent = medicines.reduce(
+            (sum, m) => sum + (m.quantity || 0),
+            0,
+          );
+        if (lowStockBadgeEl) lowStockBadgeEl.textContent = lowStockCount;
+        if (expiringSoonEl)
+          expiringSoonEl.textContent = medicines.filter(
+            (m) => m.status === "expiring_soon",
+          ).length;
+
+        // Log expired items for debugging
+        if (expiredCount > 0) {
+          console.log(
+            `Found ${expiredCount} expired item(s):`,
+            medicines
+              .filter((m) => m.status === "expired")
+              .map((m) => `${m.name} (${m.batch})`),
+          );
+        }
       }
 
-      const confirmDelete = confirm(`Are you sure you want to delete "${medicineName}"?\n\nThis action cannot be undone.`);
-      
-      if (!confirmDelete) {
-        return;
+      // Export inventory
+      function exportInventory() {
+        exportInventoryToCSV(
+          filteredMedicines.length > 0 ? filteredMedicines : allMedicines,
+          "inventory",
+        );
       }
 
-      const result = await deleteMedicine(medicineId);
-      
-      if (result.success) {
-        alert('Medicine deleted successfully.');
-        // Table will update automatically via real-time listener
-      } else {
-        alert('Error: ' + result.error);
+      // Print inventory
+      function printInventory() {
+        const medicines =
+          filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
+        generateInventoryPDF(medicines);
       }
-    }
 
-    // Update dashboard statistics
-    function updateDashboardStats(medicines) {
-      // Update low stock count
-      const lowStockCount = medicines.filter(m => 
-        m.status === 'low_stock' || m.quantity <= m.minThreshold
-      ).length;
-      const lowStockCountEl = document.getElementById('lowStockCount');
-      if (lowStockCountEl) {
-        lowStockCountEl.textContent = lowStockCount;
-      }
-      
-      // Update expired count (ensure it's visible)
-      const expiredCount = medicines.filter(m => m.status === 'expired').length;
-      const expiredCountEl = document.getElementById('expiredCount');
-      if (expiredCountEl) {
-        expiredCountEl.textContent = expiredCount;
-      }
-      
-      // Update stats badges
-      const totalMedicinesEl = document.getElementById('totalMedicines');
-      const totalStockEl = document.getElementById('totalStock');
-      const lowStockBadgeEl = document.getElementById('lowStockCountBadge');
-      const expiringSoonEl = document.getElementById('expiringSoonCount');
-      
-      if (totalMedicinesEl) totalMedicinesEl.textContent = medicines.length;
-      if (totalStockEl) totalStockEl.textContent = medicines.reduce((sum, m) => sum + (m.quantity || 0), 0);
-      if (lowStockBadgeEl) lowStockBadgeEl.textContent = lowStockCount;
-      if (expiringSoonEl) expiringSoonEl.textContent = medicines.filter(m => 
-        m.status === 'expiring_soon'
-      ).length;
-      
-      // Log expired items for debugging
-      if (expiredCount > 0) {
-        console.log(`Found ${expiredCount} expired item(s):`, 
-          medicines.filter(m => m.status === 'expired').map(m => `${m.name} (${m.batch})`));
-      }
-    }
+      // Set print header and footer (for direct page printing)
+      function setupPrintBranding() {
+        const currentDate = new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
 
-    // Export inventory
-    function exportInventory() {
-      exportInventoryToCSV(filteredMedicines.length > 0 ? filteredMedicines : allMedicines, 'inventory');
-    }
+        // Create print header if it doesn't exist
+        let header = document.getElementById("print-header");
+        if (!header) {
+          header = document.createElement("div");
+          header.id = "print-header";
+          header.className = "print-header hide-on-print";
+          header.textContent = "EHAFO CLINIC";
+          document.body.insertBefore(header, document.body.firstChild);
+        }
 
-    // Print inventory
-    function printInventory() {
-      const medicines = filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
-      generateInventoryPDF(medicines);
-    }
-    
-    // Set print header and footer (for direct page printing)
-    function setupPrintBranding() {
-      const currentDate = new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-      
-      // Create print header if it doesn't exist
-      let header = document.getElementById('print-header');
-      if (!header) {
-        header = document.createElement('div');
-        header.id = 'print-header';
-        header.className = 'print-header hide-on-print';
-        header.textContent = 'EHAFO CLINIC';
-        document.body.insertBefore(header, document.body.firstChild);
-      }
-      
-      // Create print stamp footer if it doesn't exist
-      let footer = document.getElementById('print-stamp-footer');
-      if (!footer) {
-        footer = document.createElement('div');
-        footer.id = 'print-stamp-footer';
-        footer.className = 'print-stamp-footer hide-on-print';
-        footer.innerHTML = `
+        // Create print stamp footer if it doesn't exist
+        let footer = document.getElementById("print-stamp-footer");
+        if (!footer) {
+          footer = document.createElement("div");
+          footer.id = "print-stamp-footer";
+          footer.className = "print-stamp-footer hide-on-print";
+          footer.innerHTML = `
           <div class="ministry-name">Ministry of Health and Social Services</div>
           <div>P O Box 547, Windhoek</div>
           <div>Oshana Region, Oshakati District</div>
           <div style="font-weight: bold; margin-top: 5px;">Ehafo Clinic</div>
           <div class="stamp-date">${currentDate}</div>
         `;
-        document.body.appendChild(footer);
-      } else {
-        // Update date if footer exists
-        const dateEl = footer.querySelector('.stamp-date');
-        if (dateEl) {
-          dateEl.textContent = currentDate;
+          document.body.appendChild(footer);
+        } else {
+          // Update date if footer exists
+          const dateEl = footer.querySelector(".stamp-date");
+          if (dateEl) {
+            dateEl.textContent = currentDate;
+          }
         }
       }
-    }
-    
-    // Call on page load
-    setupPrintBranding();
 
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+      // Call on page load
+      setupPrintBranding();
 
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
 
-    // Show password change notification
-    function showPasswordChangeNotification() {
-      // Create notification banner
-      const notification = document.createElement('div');
-      notification.id = 'passwordChangeNotification';
-      notification.style.cssText = `
+      // Show password change notification
+      function showPasswordChangeNotification() {
+        // Create notification banner
+        const notification = document.createElement("div");
+        notification.id = "passwordChangeNotification";
+        notification.style.cssText = `
         position: fixed;
         top: 80px;
         left: 50%;
@@ -663,8 +1132,8 @@
         gap: 1rem;
         animation: slideDown 0.3s ease-out;
       `;
-      
-      notification.innerHTML = `
+
+        notification.innerHTML = `
         <div style="flex: 1;">
           <strong style="display: block; margin-bottom: 0.25rem;">🔒 Security Alert</strong>
           <span>This is your first login. Please change your password for better security.</span>
@@ -679,9 +1148,9 @@
         </div>
       `;
 
-      // Add animation
-      const style = document.createElement('style');
-      style.textContent = `
+        // Add animation
+        const style = document.createElement("style");
+        style.textContent = `
         @keyframes slideDown {
           from {
             opacity: 0;
@@ -693,137 +1162,361 @@
           }
         }
       `;
-      document.head.appendChild(style);
+        document.head.appendChild(style);
 
-      document.body.appendChild(notification);
+        document.body.appendChild(notification);
 
-      // Auto-dismiss after 30 seconds
-      setTimeout(() => {
-        if (document.getElementById('passwordChangeNotification')) {
-          dismissPasswordNotification();
-        }
-      }, 30000);
-    }
-
-    // Dismiss password change notification
-    function dismissPasswordNotification() {
-      const notification = document.getElementById('passwordChangeNotification');
-      if (notification) {
-        notification.style.animation = 'slideDown 0.3s ease-out reverse';
+        // Auto-dismiss after 30 seconds
         setTimeout(() => {
-          notification.remove();
-        }, 300);
+          if (document.getElementById("passwordChangeNotification")) {
+            dismissPasswordNotification();
+          }
+        }, 30000);
       }
-    }
 
-    // Make dismissPasswordNotification available globally
-    window.dismissPasswordNotification = dismissPasswordNotification;
+      // Dismiss password change notification
+      function dismissPasswordNotification() {
+        const notification = document.getElementById(
+          "passwordChangeNotification",
+        );
+        if (notification) {
+          notification.style.animation = "slideDown 0.3s ease-out reverse";
+          setTimeout(() => {
+            notification.remove();
+          }, 300);
+        }
+      }
 
-    // Initialize dashboard
-    async function initDashboard() {
-      // Wait for auth state to be determined
-      const user = await new Promise((resolve) => {
-        if (auth && auth.currentUser) {
-          resolve(auth.currentUser);
+      // Make dismissPasswordNotification available globally
+      window.dismissPasswordNotification = dismissPasswordNotification;
+
+      // ─── Bulk Selection & Metrics & Emergency Orders ─────────────────────────
+
+      let selectedMedicineIds = new Set();
+
+      function initBulkSelection(isAdmin) {
+        if (!isAdmin) return;
+        const header = document.getElementById("checkboxColHeader");
+        if (header) header.style.display = "table-cell";
+        const hint = document.getElementById("adminBulkHint");
+        if (hint) hint.style.display = "block";
+      }
+
+      function toggleSelectAll(checked) {
+        const meds =
+          filteredMedicines.length > 0 ? filteredMedicines : allMedicines;
+        if (checked) {
+          meds.forEach((m) => selectedMedicineIds.add(m.id));
         } else {
-          auth.onAuthStateChanged((user) => {
-            resolve(user);
-          });
+          meds.forEach((m) => selectedMedicineIds.delete(m.id));
         }
-      });
-      
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
+        renderInventory(meds);
+        updateBulkToolbar();
       }
 
-      // Get user role and display
-      const userRole = await getUserRole();
-      const roleBadge = userRole === 'admin' ? '👑 Admin' : '👤 Staff';
-      document.getElementById('userEmail').textContent = `${user.email} (${roleBadge})`;
-      
-      // Store role for use in UI
-      window.currentUserRole = userRole;
+      function toggleMedicineSelection(medicineId, checked) {
+        if (checked) {
+          selectedMedicineIds.add(medicineId);
+        } else {
+          selectedMedicineIds.delete(medicineId);
+          const sa = document.getElementById("selectAllCheckbox");
+          if (sa) sa.checked = false;
+        }
+        updateBulkToolbar();
+      }
 
-      // Show admin-only features
-      if (userRole === 'admin') {
-        const seedLink = document.getElementById('seedMedicinesLink');
-        if (seedLink) {
-          seedLink.style.display = 'inline-block';
+      function clearBulkSelection() {
+        selectedMedicineIds.clear();
+        const sa = document.getElementById("selectAllCheckbox");
+        if (sa) sa.checked = false;
+        renderInventory(
+          filteredMedicines.length > 0 ? filteredMedicines : allMedicines,
+        );
+        updateBulkToolbar();
+      }
+
+      function updateBulkToolbar() {
+        const count = selectedMedicineIds.size;
+        const toolbar = document.getElementById("bulkToolbar");
+        const countEl = document.getElementById("bulkSelectionCount");
+        if (count > 0) {
+          toolbar.classList.add("visible");
+          countEl.textContent = `${count} medicine${count !== 1 ? "s" : ""} selected`;
+        } else {
+          toolbar.classList.remove("visible");
         }
       }
 
-      // Check if user needs to change password (first login)
-      const shouldChangePassword = await needsPasswordChange();
-      if (shouldChangePassword) {
-        showPasswordChangeNotification();
+      // Bulk Delete
+      function showBulkDeleteModal() {
+        if (selectedMedicineIds.size === 0) return;
+        const meds = allMedicines.filter((m) => selectedMedicineIds.has(m.id));
+        document.getElementById("bulkDeleteCount").textContent = meds.length;
+        document.getElementById("bulkDeleteMedicineList").innerHTML = meds
+          .map(
+            (m) =>
+              `<div style="padding:0.15rem 0;font-size:0.88rem;">• ${escapeHtml(m.name)} (Batch: ${escapeHtml(m.batch)})</div>`,
+          )
+          .join("");
+        const input = document.getElementById("bulkDeleteConfirmInput");
+        const confirmBtn = document.getElementById("bulkDeleteConfirmBtn");
+        input.value = "";
+        if (meds.length >= 10) {
+          document.getElementById("bulkDeleteWarningBox").innerHTML =
+            `⚠️ You are deleting <strong>${meds.length} items</strong>. Type <code>DELETE</code> below to confirm:`;
+          input.style.display = "block";
+          confirmBtn.disabled = true;
+          input.oninput = () => {
+            confirmBtn.disabled = input.value !== "DELETE";
+          };
+        } else {
+          document.getElementById("bulkDeleteWarningBox").innerHTML =
+            "⚠️ This action is irreversible. Medicines will be soft-deleted and removed from all views.";
+          input.style.display = "none";
+          confirmBtn.disabled = false;
+        }
+        document.getElementById("bulkDeleteModal").classList.remove("hidden");
       }
 
-      // Set up filter buttons
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          currentFilter = btn.dataset.filter;
-          filterMedicines();
+      function closeBulkDeleteModal() {
+        document.getElementById("bulkDeleteModal").classList.add("hidden");
+      }
+
+      async function executeBulkDelete() {
+        const btn = document.getElementById("bulkDeleteConfirmBtn");
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
+        const ids = Array.from(selectedMedicineIds);
+        const result = await bulkSoftDeleteMedicines(ids);
+        closeBulkDeleteModal();
+        btn.textContent = "Delete";
+        selectedMedicineIds.clear();
+        updateBulkToolbar();
+        showInAppNotification(
+          result.success
+            ? `✅ Deleted ${result.deleted} medicine${result.deleted !== 1 ? "s" : ""} successfully.`
+            : `⚠️ Deleted ${result.deleted}, failed ${result.failed}. ${result.errors[0] || ""}`,
+          result.success ? "success" : "warning",
+          5000,
+        );
+      }
+
+      // Emergency Order Modal
+      let eoSelectedMedicines = [];
+
+      function handleBulkEmergencyOrder() {
+        eoSelectedMedicines = allMedicines.filter((m) =>
+          selectedMedicineIds.has(m.id),
+        );
+        if (eoSelectedMedicines.length === 0) return;
+        document.getElementById("eoMedicineCount").textContent =
+          eoSelectedMedicines.length;
+        document.getElementById("eoMedicineList").innerHTML =
+          eoSelectedMedicines
+            .map(
+              (m) =>
+                `<div style="padding:0.15rem 0;font-size:0.88rem;">• ${escapeHtml(m.name)} — Stock: ${m.quantity} (Min: ${m.minThreshold})</div>`,
+            )
+            .join("");
+        document.getElementById("eoReason").value = "";
+        document.getElementById("eoReasonError").style.display = "none";
+        document
+          .getElementById("emergencyOrderModal")
+          .classList.remove("hidden");
+      }
+
+      function closeEOModal() {
+        document.getElementById("emergencyOrderModal").classList.add("hidden");
+      }
+
+      async function submitEmergencyOrders() {
+        const reason = document.getElementById("eoReason").value.trim();
+        const errEl = document.getElementById("eoReasonError");
+        if (!reason || reason.length < 5) {
+          errEl.textContent =
+            "Please provide a reason (at least 5 characters).";
+          errEl.style.display = "block";
+          return;
+        }
+        errEl.style.display = "none";
+        const btn = document.getElementById("eoSubmitBtn");
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+        const result = await bulkCreateEmergencyOrders(
+          eoSelectedMedicines,
+          reason,
+        );
+        closeEOModal();
+        btn.disabled = false;
+        btn.textContent = "Submit Emergency Orders";
+        clearBulkSelection();
+        showInAppNotification(
+          result.success
+            ? `🚨 Created ${result.created} emergency order${result.created !== 1 ? "s" : ""}.`
+            : `⚠️ Created ${result.created}, failed ${result.failed}.`,
+          "warning",
+          5000,
+        );
+      }
+
+      // Metrics
+      let metricsHistory = [];
+
+      async function loadMetricsHistoryOnce() {
+        try {
+          metricsHistory = await loadMetricsHistory(7);
+        } catch (e) {
+          metricsHistory = [];
+        }
+      }
+
+      async function refreshMetrics() {
+        const container = document.getElementById("metricsContainer");
+        if (!container || !allMedicines.length) return;
+        const catSelect = document.getElementById("metricsCategoryFilter");
+        if (catSelect && catSelect.options.length <= 1) {
+          const cats = getMedicineCategories(allMedicines);
+          catSelect.innerHTML = cats
+            .map(
+              (c) =>
+                `<option value="${c}">${c === "all" ? "All Categories" : c}</option>`,
+            )
+            .join("");
+        }
+        const catFilter = catSelect ? catSelect.value : "all";
+        const statusFilter =
+          document.getElementById("metricsStatusFilter")?.value || "all";
+        const metrics = computeMetrics(allMedicines, {
+          categoryFilter: catFilter,
+          statusFilter,
         });
-      });
+        renderMetricsSection(container, metrics, {
+          showHistory: metricsHistory.length > 0,
+          history: metricsHistory,
+        });
+        saveMetricsSnapshot(metrics).catch(() => {});
+      }
 
-      // Set up search with debouncing for better performance
-      let searchTimeout;
-      const searchInput = document.getElementById('searchInput');
-      searchInput.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
+      // Initialize dashboard
+      async function initDashboard() {
+        // Wait for auth state to be determined
+        const user = await new Promise((resolve) => {
+          if (auth && auth.currentUser) {
+            resolve(auth.currentUser);
+          } else {
+            auth.onAuthStateChanged((user) => {
+              resolve(user);
+            });
+          }
+        });
+
+        if (!user) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        // Get user role and display
+        const userRole = await getUserRole();
+        const roleBadge = userRole === "admin" ? "👑 Admin" : "👤 Staff";
+        document.getElementById("userEmail").textContent =
+          `${user.email} (${roleBadge})`;
+
+        // Store role for use in UI
+        window.currentUserRole = userRole;
+
+        // Show admin-only bulk features
+        if (userRole === "admin") {
+          initBulkSelection(true);
+          const seedLink = document.getElementById("seedMedicinesLink");
+          if (seedLink) seedLink.style.display = "inline-block";
+        }
+
+        // Load metrics history for sparkline trends
+        loadMetricsHistoryOnce();
+
+        // Update pending emergency orders badge
+        getPendingEmergencyOrderCount()
+          .then((count) => {
+            const badge = document.getElementById("pendingEOBadge");
+            if (badge) {
+              badge.textContent = count;
+              badge.style.display = count > 0 ? "inline" : "none";
+            }
+          })
+          .catch(() => {});
+
+        // Subscribe to medicines (real-time updates)
+        medicinesUnsubscribe = subscribeToMedicines((medicines) => {
+          allMedicines = medicines;
+          const medicinesWithStock = medicines.filter(
+            (m) => (m.quantity || 0) > 0,
+          );
           filterMedicines();
-        }, 150); // Wait 150ms after user stops typing
-      });
-      
-      // Also trigger immediately on Enter key
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+          updateDashboardStats(medicinesWithStock);
+          refreshMetrics();
+        });
+        const shouldChangePassword = await needsPasswordChange();
+        if (shouldChangePassword) {
+          showPasswordChangeNotification();
+        }
+
+        // Set up filter buttons
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document
+              .querySelectorAll(".filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.dataset.filter;
+            filterMedicines();
+          });
+        });
+
+        // Set up search with debouncing for better performance
+        let searchTimeout;
+        const searchInput = document.getElementById("searchInput");
+        searchInput.addEventListener("input", () => {
           clearTimeout(searchTimeout);
-          filterMedicines();
-        }
-        // Clear search with Escape key
-        if (e.key === 'Escape') {
-          clearSearch();
-        }
-      });
-      
-      // Focus search input when Ctrl+F or Cmd+F is pressed
-      document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-          e.preventDefault();
-          searchInput.focus();
-          searchInput.select();
-        }
+          searchTimeout = setTimeout(() => {
+            filterMedicines();
+          }, 150); // Wait 150ms after user stops typing
+        });
+
+        // Also trigger immediately on Enter key
+        searchInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            clearTimeout(searchTimeout);
+            filterMedicines();
+          }
+          // Clear search with Escape key
+          if (e.key === "Escape") {
+            clearSearch();
+          }
+        });
+
+        // Focus search input when Ctrl+F or Cmd+F is pressed
+        document.addEventListener("keydown", (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+          }
+        });
+
+        // Subscribe to alerts (real-time updates)
+        alertsUnsubscribe = subscribeToAlerts((alerts) => {
+          renderAlerts(alerts);
+        });
+      }
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (medicinesUnsubscribe) medicinesUnsubscribe();
+        if (alertsUnsubscribe) alertsUnsubscribe();
       });
 
-      // Subscribe to medicines (real-time updates)
-      medicinesUnsubscribe = subscribeToMedicines((medicines) => {
-        allMedicines = medicines;
-        // Filter to only medicines with stock for stats
-        const medicinesWithStock = medicines.filter(m => (m.quantity || 0) > 0);
-        filterMedicines();
-        updateDashboardStats(medicinesWithStock);
-      });
-
-      // Subscribe to alerts (real-time updates)
-      alertsUnsubscribe = subscribeToAlerts((alerts) => {
-        renderAlerts(alerts);
-      });
-    }
-
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-      if (medicinesUnsubscribe) medicinesUnsubscribe();
-      if (alertsUnsubscribe) alertsUnsubscribe();
-    });
-
-    // Initialize when page loads
-    initDashboard();
-  </script>
-</body>
+      // Initialize when page loads
+      initDashboard();
+    </script>
+  </body>
 </html>
-

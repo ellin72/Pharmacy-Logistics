@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emergency Orders — Ehafo Clinic Pharmacy</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <style>
+      .eo-page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+      }
+      .eo-create-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .eo-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-secondary);
+      }
+      .eo-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+      }
+      .eo-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+        align-items: center;
+      }
+      .eo-filters label {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+      }
+      .eo-admin-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+      }
+      .eo-notes-area {
+        width: 100%;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.35rem;
+        font-size: 0.88rem;
+        resize: vertical;
+        min-height: 60px;
+      }
+      #createModal .modal-box {
+        max-width: 520px;
+      }
+      #createModal textarea {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.375rem;
+        font-size: 0.9rem;
+        resize: vertical;
+        min-height: 80px;
+      }
+      .summary-bar {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+      .summary-chip {
+        padding: 0.3rem 0.75rem;
+        border-radius: 99px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="dashboard.html" class="logo">💊 Ehafo Pharmacy</a>
+          <nav class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="order-list.html">Order List</a>
+            <a href="transactions.html">Transactions</a>
+            <a href="emergency-orders.html" class="active">Emergency Orders</a>
+          </nav>
+        </div>
+        <div class="header-right">
+          <span id="userEmail" class="user-email"></span>
+          <button id="logoutBtn" class="btn btn-secondary btn-sm">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- Page Title -->
+      <div class="eo-page-header">
+        <div>
+          <h1 style="margin: 0; font-size: 1.5rem">🚨 Emergency Orders</h1>
+          <p
+            style="
+              margin: 0.25rem 0 0;
+              color: var(--text-secondary);
+              font-size: 0.9rem;
+            "
+          >
+            Track and manage urgent medicine requests
+          </p>
+        </div>
+        <button
+          onclick="openCreateModal()"
+          class="btn btn-danger eo-create-btn"
+        >
+          + Create Emergency Order
+        </button>
+      </div>
+
+      <!-- Summary Bar -->
+      <div class="summary-bar" id="summaryBar" style="display: none">
+        <span class="summary-chip" id="summaryPending">⏳ 0 Pending</span>
+        <span class="summary-chip" id="summaryApproved">✅ 0 Approved</span>
+        <span class="summary-chip" id="summaryOrdered">📦 0 Ordered</span>
+        <span class="summary-chip" id="summaryFulfilled">✔️ 0 Fulfilled</span>
+        <span class="summary-chip" id="summaryCancelled">❌ 0 Cancelled</span>
+      </div>
+
+      <!-- Status Tabs -->
+      <div class="status-tabs" role="tablist" id="statusTabs">
+        <button
+          class="status-tab active"
+          data-status="all"
+          onclick="switchTab('all')"
+          role="tab"
+        >
+          All
+        </button>
+        <button
+          class="status-tab"
+          data-status="pending"
+          onclick="switchTab('pending')"
+          role="tab"
+        >
+          ⏳ Pending
+        </button>
+        <button
+          class="status-tab"
+          data-status="approved"
+          onclick="switchTab('approved')"
+          role="tab"
+        >
+          ✅ Approved
+        </button>
+        <button
+          class="status-tab"
+          data-status="ordered"
+          onclick="switchTab('ordered')"
+          role="tab"
+        >
+          📦 Ordered
+        </button>
+        <button
+          class="status-tab"
+          data-status="fulfilled"
+          onclick="switchTab('fulfilled')"
+          role="tab"
+        >
+          ✔️ Fulfilled
+        </button>
+        <button
+          class="status-tab"
+          data-status="cancelled"
+          onclick="switchTab('cancelled')"
+          role="tab"
+        >
+          ❌ Cancelled
+        </button>
+      </div>
+
+      <!-- Orders List -->
+      <div id="ordersContainer">
+        <div class="loading">Loading emergency orders...</div>
+      </div>
+    </div>
+
+    <!-- Create Emergency Order Modal -->
+    <div
+      id="createModal"
+      class="modal-overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="createModalTitle"
+    >
+      <div class="modal-box">
+        <h3 class="modal-title" id="createModalTitle">
+          🚨 New Emergency Order
+        </h3>
+        <div
+          class="modal-body"
+          style="display: flex; flex-direction: column; gap: 0.85rem"
+        >
+          <div>
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+              >Medicine <span style="color: red">*</span></label
+            >
+            <select id="createMedicineId" class="form-select" required>
+              <option value="">-- Select Medicine --</option>
+            </select>
+            <div
+              id="createMedicineInfo"
+              style="
+                font-size: 0.8rem;
+                color: var(--text-secondary);
+                margin-top: 0.25rem;
+                display: none;
+              "
+            ></div>
+          </div>
+
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem"
+          >
+            <div>
+              <label
+                style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+                >Quantity Needed <span style="color: red">*</span></label
+              >
+              <input
+                type="number"
+                id="createQuantity"
+                min="1"
+                class="form-input"
+                placeholder="e.g. 100"
+              />
+            </div>
+            <div>
+              <label
+                style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+                >Priority</label
+              >
+              <select id="createPriority" class="form-select">
+                <option value="emergency">🔴 Emergency</option>
+                <option value="urgent">🟠 Urgent</option>
+                <option value="routine">🟡 Routine</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+              >Reason <span style="color: red">*</span></label
+            >
+            <textarea
+              id="createReason"
+              placeholder="Describe why this order is needed urgently..."
+            ></textarea>
+            <div
+              id="createReasonError"
+              style="
+                color: var(--danger-color);
+                font-size: 0.8rem;
+                display: none;
+                margin-top: 0.2rem;
+              "
+            ></div>
+          </div>
+
+          <div>
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+              >Notes (optional)</label
+            >
+            <textarea
+              id="createNotes"
+              placeholder="Any additional notes or supplier info..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button
+            onclick="submitCreateOrder()"
+            class="btn btn-danger"
+            id="createSubmitBtn"
+          >
+            Submit Emergency Order
+          </button>
+          <button onclick="closeCreateModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Update Modal -->
+    <div
+      id="statusModal"
+      class="modal-overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="statusModalTitle"
+    >
+      <div class="modal-box">
+        <h3 class="modal-title" id="statusModalTitle">Update Order Status</h3>
+        <div
+          class="modal-body"
+          style="display: flex; flex-direction: column; gap: 0.75rem"
+        >
+          <input type="hidden" id="statusModalOrderId" />
+          <div>
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+              >New Status <span style="color: red">*</span></label
+            >
+            <select id="statusModalNewStatus" class="form-select">
+              <option value="approved">✅ Approve</option>
+              <option value="ordered">📦 Mark as Ordered</option>
+              <option value="fulfilled">✔️ Mark as Fulfilled</option>
+              <option value="cancelled">❌ Cancel</option>
+            </select>
+          </div>
+          <div>
+            <label
+              style="display: block; font-weight: 600; margin-bottom: 0.25rem"
+              >Admin Notes</label
+            >
+            <textarea
+              class="eo-notes-area"
+              id="statusModalNotes"
+              placeholder="Add notes for this status update..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button
+            onclick="submitStatusUpdate()"
+            class="btn btn-primary"
+            id="statusSubmitBtn"
+          >
+            Update Status
+          </button>
+          <button onclick="closeStatusModal()" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/emergency-orders.js"></script>
+
+    <script>
+      let currentTab = "all";
+      let currentUserRole = "staff";
+      let unsubscribeOrders = null;
+      let allMedicines = [];
+
+      // ─── Utilities ────────────────────────────────────────────────────────────
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        return String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function formatDate(val) {
+        if (!val) return "N/A";
+        let d;
+        if (val && typeof val.toDate === "function") d = val.toDate();
+        else d = new Date(val);
+        if (isNaN(d.getTime())) return "N/A";
+        return d.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function showNotif(msg, type = "success", duration = 4000) {
+        if (typeof showInAppNotification === "function") {
+          showInAppNotification(msg, type, duration);
+        } else {
+          alert(msg);
+        }
+      }
+
+      // ─── Tab Switching ────────────────────────────────────────────────────────
+
+      function switchTab(status) {
+        currentTab = status;
+        document.querySelectorAll(".status-tab").forEach((t) => {
+          t.classList.toggle("active", t.dataset.status === status);
+        });
+        if (unsubscribeOrders) {
+          unsubscribeOrders();
+          unsubscribeOrders = null;
+        }
+        subscribeOrders();
+      }
+
+      // ─── Subscribe to Orders ──────────────────────────────────────────────────
+
+      function subscribeOrders() {
+        const container = document.getElementById("ordersContainer");
+        container.innerHTML = '<div class="loading">Loading...</div>';
+        unsubscribeOrders = subscribeToEmergencyOrders((orders) => {
+          renderOrders(orders);
+          updateSummaryBar(orders);
+        }, currentTab);
+      }
+
+      function updateSummaryBar(orders) {
+        const bar = document.getElementById("summaryBar");
+        bar.style.display = orders.length > 0 ? "flex" : "none";
+        const counts = {
+          pending: 0,
+          approved: 0,
+          ordered: 0,
+          fulfilled: 0,
+          cancelled: 0,
+        };
+        orders.forEach((o) => {
+          if (counts[o.status] !== undefined) counts[o.status]++;
+        });
+        document.getElementById("summaryPending").textContent =
+          `⏳ ${counts.pending} Pending`;
+        document.getElementById("summaryApproved").textContent =
+          `✅ ${counts.approved} Approved`;
+        document.getElementById("summaryOrdered").textContent =
+          `📦 ${counts.ordered} Ordered`;
+        document.getElementById("summaryFulfilled").textContent =
+          `✔️ ${counts.fulfilled} Fulfilled`;
+        document.getElementById("summaryCancelled").textContent =
+          `❌ ${counts.cancelled} Cancelled`;
+      }
+
+      // ─── Render Orders ────────────────────────────────────────────────────────
+
+      function renderOrders(orders) {
+        const container = document.getElementById("ordersContainer");
+        if (!orders || orders.length === 0) {
+          container.innerHTML = `
+          <div class="eo-empty">
+            <div class="eo-empty-icon">🚨</div>
+            <p>No emergency orders found${currentTab !== "all" ? ' for status "' + currentTab + '"' : ""}.</p>
+            <button onclick="openCreateModal()" class="btn btn-danger" style="margin-top:0.75rem;">+ Create Emergency Order</button>
+          </div>`;
+          return;
+        }
+        container.innerHTML = orders.map((o) => renderOrderCard(o)).join("");
+      }
+
+      function renderOrderCard(o) {
+        const badgeClass = getEOStatusBadgeClass(o.status);
+        const isAdmin = currentUserRole === "admin";
+        const adminControls =
+          isAdmin && o.status !== "fulfilled" && o.status !== "cancelled"
+            ? `
+        <div class="eo-admin-controls">
+          <button onclick="openStatusModal('${o.id}', '${escapeHtml(o.status)}')" class="btn btn-sm btn-primary">✏️ Update Status</button>
+          ${o.status === "pending" ? `<button onclick="quickCancel('${o.id}')" class="btn btn-sm btn-danger">❌ Cancel</button>` : ""}
+        </div>`
+            : "";
+
+        const staffCancel =
+          !isAdmin &&
+          o.status === "pending" &&
+          o.requestedBy === window._currentUid
+            ? `
+        <div class="eo-admin-controls">
+          <button onclick="quickCancel('${o.id}')" class="btn btn-sm btn-danger">❌ Cancel Request</button>
+        </div>`
+            : "";
+
+        return `
+      <div class="emergency-order-card">
+        <div class="eo-header">
+          <div>
+            <div class="eo-title">${escapeHtml(o.medicineName || "Unknown Medicine")}</div>
+            <div class="eo-meta">
+              Requested by <strong>${escapeHtml(o.requestedByEmail || o.requestedBy || "Unknown")}</strong>
+              · ${formatDate(o.requestedAt)}
+            </div>
+          </div>
+          <span class="badge ${badgeClass}">${formatEOStatus(o.status)}</span>
+        </div>
+        <div class="eo-details">
+          <div class="eo-stat"><span>📦 Qty Requested</span><strong>${o.requestedQuantity}</strong></div>
+          <div class="eo-stat"><span>📊 Current Stock</span><strong>${o.currentStock !== undefined ? o.currentStock : "N/A"}</strong></div>
+          <div class="eo-stat"><span>⚠️ Min Threshold</span><strong>${o.minThreshold !== undefined ? o.minThreshold : "N/A"}</strong></div>
+          <div class="eo-stat"><span>🎯 Priority</span><strong>${escapeHtml(o.priority || "emergency")}</strong></div>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.88rem;"><strong>Reason:</strong> ${escapeHtml(o.reason || "—")}</div>
+        ${o.notes ? `<div style="margin-top:0.25rem;font-size:0.85rem;color:var(--text-secondary);"><strong>Notes:</strong> ${escapeHtml(o.notes)}</div>` : ""}
+        ${o.updatedAt ? `<div style="margin-top:0.25rem;font-size:0.78rem;color:var(--text-secondary);">Last updated: ${formatDate(o.updatedAt)}</div>` : ""}
+        <div class="eo-actions">
+          ${adminControls}${staffCancel}
+        </div>
+      </div>`;
+      }
+
+      // ─── Create Order Modal ───────────────────────────────────────────────────
+
+      function openCreateModal() {
+        // Populate medicine dropdown
+        const sel = document.getElementById("createMedicineId");
+        sel.innerHTML = '<option value="">-- Select Medicine --</option>';
+        allMedicines.forEach((m) => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = `${m.name} (Stock: ${m.quantity}, Min: ${m.minThreshold})`;
+          opt.dataset.stock = m.quantity;
+          opt.dataset.min = m.minThreshold;
+          opt.dataset.name = m.name;
+          sel.appendChild(opt);
+        });
+        sel.onchange = () => {
+          const opt = sel.options[sel.selectedIndex];
+          const infoEl = document.getElementById("createMedicineInfo");
+          if (opt.value) {
+            infoEl.textContent = `Current stock: ${opt.dataset.stock} units, Min threshold: ${opt.dataset.min}`;
+            infoEl.style.display = "block";
+          } else {
+            infoEl.style.display = "none";
+          }
+        };
+        document.getElementById("createQuantity").value = "";
+        document.getElementById("createReason").value = "";
+        document.getElementById("createNotes").value = "";
+        document.getElementById("createReasonError").style.display = "none";
+        document.getElementById("createModal").classList.remove("hidden");
+      }
+
+      function closeCreateModal() {
+        document.getElementById("createModal").classList.add("hidden");
+      }
+
+      async function submitCreateOrder() {
+        const sel = document.getElementById("createMedicineId");
+        const medicineId = sel.value;
+        const opt = sel.options[sel.selectedIndex];
+        const medicineName = opt ? opt.dataset.name : "";
+        const currentStock = opt ? parseInt(opt.dataset.stock) || 0 : 0;
+        const minThreshold = opt ? parseInt(opt.dataset.min) || 0 : 0;
+        const qty =
+          parseInt(document.getElementById("createQuantity").value) || 0;
+        const reason = document.getElementById("createReason").value.trim();
+        const notes = document.getElementById("createNotes").value.trim();
+        const priority = document.getElementById("createPriority").value;
+
+        const errEl = document.getElementById("createReasonError");
+        if (!medicineId) {
+          errEl.textContent = "Please select a medicine.";
+          errEl.style.display = "block";
+          return;
+        }
+        if (qty <= 0) {
+          errEl.textContent = "Quantity must be greater than 0.";
+          errEl.style.display = "block";
+          return;
+        }
+        if (!reason || reason.length < 5) {
+          errEl.textContent = "Please enter a reason (min 5 characters).";
+          errEl.style.display = "block";
+          return;
+        }
+        errEl.style.display = "none";
+
+        const btn = document.getElementById("createSubmitBtn");
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+
+        const result = await createEmergencyOrder({
+          medicineId,
+          medicineName,
+          requestedQuantity: qty,
+          currentStock,
+          minThreshold,
+          reason,
+          notes,
+          priority,
+        });
+
+        btn.disabled = false;
+        btn.textContent = "Submit Emergency Order";
+
+        if (result.success) {
+          closeCreateModal();
+          showNotif("🚨 Emergency order created successfully.", "success");
+        } else {
+          errEl.textContent = result.error || "Failed to create order.";
+          errEl.style.display = "block";
+        }
+      }
+
+      // ─── Status Update Modal ──────────────────────────────────────────────────
+
+      function openStatusModal(orderId, currentStatus) {
+        document.getElementById("statusModalOrderId").value = orderId;
+        document.getElementById("statusModalNotes").value = "";
+        // Pre-select next logical status
+        const sel = document.getElementById("statusModalNewStatus");
+        const progression = {
+          pending: "approved",
+          approved: "ordered",
+          ordered: "fulfilled",
+        };
+        sel.value = progression[currentStatus] || "approved";
+        document.getElementById("statusModal").classList.remove("hidden");
+      }
+
+      function closeStatusModal() {
+        document.getElementById("statusModal").classList.add("hidden");
+      }
+
+      async function submitStatusUpdate() {
+        const orderId = document.getElementById("statusModalOrderId").value;
+        const newStatus = document.getElementById("statusModalNewStatus").value;
+        const notes = document.getElementById("statusModalNotes").value.trim();
+
+        const btn = document.getElementById("statusSubmitBtn");
+        btn.disabled = true;
+        btn.textContent = "Updating...";
+
+        const result = await updateEmergencyOrderStatus(
+          orderId,
+          newStatus,
+          notes,
+        );
+
+        btn.disabled = false;
+        btn.textContent = "Update Status";
+
+        if (result.success) {
+          closeStatusModal();
+          showNotif(`✅ Order status updated to "${newStatus}".`, "success");
+        } else {
+          showNotif(
+            "Error: " + (result.error || "Failed to update status."),
+            "error",
+          );
+        }
+      }
+
+      async function quickCancel(orderId) {
+        const reason = prompt("Enter reason for cancellation:");
+        if (reason === null) return; // user cancelled prompt
+        const result = await cancelEmergencyOrder(
+          orderId,
+          reason.trim() || "Cancelled by user.",
+        );
+        if (result.success) {
+          showNotif("Order cancelled.", "success");
+        } else {
+          showNotif("Error: " + result.error, "error");
+        }
+      }
+
+      // ─── Init ─────────────────────────────────────────────────────────────────
+
+      async function init() {
+        const user = await new Promise((resolve) => {
+          if (auth && auth.currentUser) return resolve(auth.currentUser);
+          auth.onAuthStateChanged(resolve);
+        });
+
+        if (!user) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        window._currentUid = user.uid;
+        const userRole = await getUserRole();
+        currentUserRole = userRole;
+        window.currentUserRole = userRole;
+
+        const roleBadge = userRole === "admin" ? "👑 Admin" : "👤 Staff";
+        document.getElementById("userEmail").textContent =
+          `${user.email} (${roleBadge})`;
+
+        document
+          .getElementById("logoutBtn")
+          .addEventListener("click", async () => {
+            await auth.signOut();
+            window.location.href = "index.html";
+          });
+
+        // Load medicines for the create form
+        try {
+          allMedicines = await getAllMedicines();
+        } catch (e) {
+          allMedicines = [];
+        }
+
+        // Start listening to orders
+        subscribeOrders();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
