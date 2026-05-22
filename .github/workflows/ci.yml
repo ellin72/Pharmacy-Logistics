@@ -6,11 +6,17 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Restrict default GITHUB_TOKEN permissions to read-only
+permissions:
+  contents: read
+
 jobs:
   # ─── HTML Validation ─────────────────────────────────────────────────────────
   validate-html:
     name: Validate HTML
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +30,10 @@ jobs:
         run: npm install -g html-validate
 
       - name: Validate HTML files
+        # Note: `|| true` is intentional — the project HTML files use inline styles
+        # and legacy patterns that would fail strict html-validate rules.
+        # This step is informational; update the config rules to fail hard once
+        # the HTML patterns are standardised.
         run: |
           cd frontend
           html-validate \
@@ -34,6 +44,8 @@ jobs:
   lint-js:
     name: Lint JavaScript
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +58,10 @@ jobs:
         run: npm install -g eslint
 
       - name: Lint JavaScript files
+        # Note: `|| true` is intentional — the project uses global Firebase/browser
+        # functions (firebase, auth, db, etc.) that ESLint reports as undefined
+        # without a full config. This step is informational until a proper
+        # .eslintrc is added with Firebase globals declared.
         run: |
           eslint frontend/js/*.js \
             --env browser \
@@ -57,6 +73,8 @@ jobs:
   check-secrets:
     name: Detect Hardcoded Secrets
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -73,6 +91,8 @@ jobs:
   check-links:
     name: Check Documentation Links
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -87,6 +107,8 @@ jobs:
   validate-structure:
     name: Validate Project Structure
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 

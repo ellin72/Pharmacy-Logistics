@@ -85,30 +85,23 @@ function showInAppNotification(message, type = 'info', duration = 5000) {
 
   const colors = typeColors[type] || typeColors.info;
 
-  container.innerHTML = `
-    <div style="
-      background: ${colors.bg};
-      border-left: 4px solid ${colors.border};
-      padding: 1rem;
-      border-radius: 0.375rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    ">
-      <div style="flex: 1; color: ${colors.text};">
-        ${message}
-      </div>
-      <button onclick="this.parentElement.parentElement.remove()" style="
-        background: transparent;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: ${colors.text};
-        opacity: 0.7;
-      ">×</button>
-    </div>
-  `;
+  // Build the notification using DOM methods to avoid XSS via innerHTML
+  const card = document.createElement('div');
+  card.style.cssText = `background:${colors.bg};border-left:4px solid ${colors.border};padding:1rem;border-radius:0.375rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:1rem;`;
+
+  const msgEl = document.createElement('div');
+  msgEl.style.cssText = `flex:1;color:${colors.text};`;
+  msgEl.textContent = message;  // safe — textContent never interprets HTML
+
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = `background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:${colors.text};opacity:0.7;`;
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Dismiss notification');
+  closeBtn.addEventListener('click', () => container.remove());
+
+  card.appendChild(msgEl);
+  card.appendChild(closeBtn);
+  container.appendChild(card);
 
   document.body.appendChild(container);
 

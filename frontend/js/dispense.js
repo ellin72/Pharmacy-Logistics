@@ -89,10 +89,39 @@ function handleMedicineSelected() {
     if (match.status === 'expired') statusColor = 'var(--danger-color)';
     else if (match.status === 'expiring_soon' || match.status === 'low_stock') statusColor = 'var(--warning-color)';
 
-    stockInfoText.innerHTML =
-      `Available: <strong>${match.quantity}</strong> units &nbsp;|&nbsp; ` +
-      `Expiry: <strong>${expiryStr}</strong> &nbsp;|&nbsp; ` +
-      `Status: <strong style="color:${statusColor}">${match.status || 'in_stock'}</strong>`;
+    // Build stock info using DOM methods to avoid any risk of XSS from status/batch values
+    stockInfoText.textContent = '';
+    const statusText = match.status || 'in_stock';
+
+    const fragment = document.createDocumentFragment();
+
+    const availSpan = document.createElement('span');
+    availSpan.textContent = 'Available: ';
+    const availStrong = document.createElement('strong');
+    availStrong.textContent = String(match.quantity);
+    availSpan.appendChild(availStrong);
+    const availSuffix = document.createTextNode(' units  |  ');
+    fragment.appendChild(availSpan);
+    fragment.appendChild(availSuffix);
+
+    const expirySpan = document.createElement('span');
+    expirySpan.textContent = 'Expiry: ';
+    const expiryStrong = document.createElement('strong');
+    expiryStrong.textContent = expiryStr;
+    expirySpan.appendChild(expiryStrong);
+    const expirySuffix = document.createTextNode('  |  ');
+    fragment.appendChild(expirySpan);
+    fragment.appendChild(expirySuffix);
+
+    const statusSpan = document.createElement('span');
+    statusSpan.textContent = 'Status: ';
+    const statusStrong = document.createElement('strong');
+    statusStrong.style.color = statusColor;
+    statusStrong.textContent = statusText;
+    statusSpan.appendChild(statusStrong);
+    fragment.appendChild(statusSpan);
+
+    stockInfoText.appendChild(fragment);
 
     stockInfo.style.display = 'block';
   } else {

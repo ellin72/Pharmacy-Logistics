@@ -11,16 +11,24 @@
  * Strip HTML tags and dangerous characters from a string.
  * Use on every user-supplied text field before storing to Firestore.
  *
+ * Sets innerHTML on a detached element so the browser parser handles all
+ * tag-stripping (including nested/obfuscated patterns), then reads back
+ * only the safe textContent. The element is never appended to the document
+ * so no scripts execute.
+ *
  * @param {string} value
  * @returns {string}
  */
 function sanitizeText(value) {
   if (typeof value !== 'string') return '';
-  // Remove HTML tags
-  let cleaned = value.replace(/<[^>]*>/g, '');
+  // Use a temporary DOM element. Set innerHTML so the browser parses
+  // (and discards) all HTML tags, then read back safe textContent only.
+  const temp = document.createElement('div');
+  temp.innerHTML = value;
+  // textContent returns only text nodes — all HTML structure is stripped.
+  const plain = temp.textContent || temp.innerText || '';
   // Collapse runs of whitespace but preserve single spaces
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  return cleaned;
+  return plain.replace(/\s+/g, ' ').trim();
 }
 
 /**
