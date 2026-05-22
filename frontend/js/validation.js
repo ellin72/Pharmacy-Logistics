@@ -8,25 +8,23 @@
 // ─── Sanitization ────────────────────────────────────────────────────────────
 
 /**
- * Strip HTML tags and dangerous characters from a string.
- * Use on every user-supplied text field before storing to Firestore.
+ * Strip HTML tags from a string and return safe plain text.
+ * Use on every user-supplied field before storing to Firestore.
  *
- * Sets innerHTML on a detached element so the browser parser handles all
- * tag-stripping (including nested/obfuscated patterns), then reads back
- * only the safe textContent. The element is never appended to the document
- * so no scripts execute.
+ * Uses the browser's DOMParser API which parses HTML in a sandboxed
+ * document that does not execute scripts. Reading `textContent` then
+ * strips all markup, returning only text nodes.
  *
  * @param {string} value
  * @returns {string}
  */
 function sanitizeText(value) {
   if (typeof value !== 'string') return '';
-  // Use a temporary DOM element. Set innerHTML so the browser parses
-  // (and discards) all HTML tags, then read back safe textContent only.
-  const temp = document.createElement('div');
-  temp.innerHTML = value;
-  // textContent returns only text nodes — all HTML structure is stripped.
-  const plain = temp.textContent || temp.innerText || '';
+  // DOMParser.parseFromString with 'text/html' runs in a sandboxed document
+  // that does not execute scripts, event handlers, or external resources.
+  const doc = new DOMParser().parseFromString(value, 'text/html');
+  // textContent returns only text nodes — all HTML structure is discarded.
+  const plain = doc.body.textContent || '';
   // Collapse runs of whitespace but preserve single spaces
   return plain.replace(/\s+/g, ' ').trim();
 }
@@ -45,21 +43,40 @@ function sanitizeBatchNumber(value) {
 // ─── Field-level validators ──────────────────────────────────────────────────
 
 /**
+ * Validate a name field (medicine name, supplier name, etc.).
+ * @param {string} name
+ * @param {string} [label] - Human-readable field label for error messages
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateName(name, label = 'Name') {
+  if (!name || !name.trim()) {
+    return { valid: false, error: `${label} is required.` };
+  }
+  if (name.trim().length < 2) {
+    return { valid: false, error: `${label} must be at least 2 characters.` };
+  }
+  if (name.trim().length > 200) {
+    return { valid: false, error: `${label} must be 200 characters or fewer.` };
+  }
+  return { valid: true };
+}
+
+/**
  * Validate a medicine name.
  * @param {string} name
  * @returns {{ valid: boolean, error?: string }}
  */
 function validateMedicineName(name) {
-  if (!name || !name.trim()) {
-    return { valid: false, error: 'Medicine name is required.' };
-  }
-  if (name.trim().length < 2) {
-    return { valid: false, error: 'Medicine name must be at least 2 characters.' };
-  }
-  if (name.trim().length > 200) {
-    return { valid: false, error: 'Medicine name must be 200 characters or fewer.' };
-  }
-  return { valid: true };
+  return validateName(name, 'Medicine name');
+}
+
+/**
+ * Validate a supplier name.
+ * @param {string} name
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateSupplierName(name) {
+  return validateName(name, 'Supplier name');
 }
 
 /**

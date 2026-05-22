@@ -177,9 +177,9 @@ async function handleSupplierSave(e) {
   // ── Validate ──────────────────────────────────────────────────────────────
   let hasErrors = false;
 
-  const nameResult = validateMedicineName(name); // reuse: same pattern (non-empty, ≤200 chars)
+  const nameResult = validateSupplierName(name);
   if (!nameResult.valid) {
-    showFieldError('supplierName', 'Supplier name is required (2–200 characters).');
+    showFieldError('supplierName', nameResult.error);
     hasErrors = true;
   }
 

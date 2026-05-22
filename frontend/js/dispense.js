@@ -53,7 +53,8 @@ async function loadMedicines() {
       datalist.innerHTML = '';
       allMedicinesCache.forEach(med => {
         const opt = document.createElement('option');
-        // Include batch in the option label to differentiate same-name medicines
+        // Setting .value as a property (not innerHTML) is safe — the browser
+        // escapes the text before rendering it as an attribute value.
         opt.value = `${med.name} [${med.batch}]`;
         opt.dataset.id = med.id;
         datalist.appendChild(opt);
