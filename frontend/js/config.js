@@ -18,10 +18,18 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Firestore settings (for offline support - optional)
-// db.enablePersistence().catch((err) => {
-//   console.log('Persistence failed:', err);
-// });
+// Enable Firestore offline persistence for clinic reliability
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    // Multiple tabs open; persistence only works in one tab at a time
+    console.warn('Firestore persistence unavailable: multiple tabs open.');
+  } else if (err.code === 'unimplemented') {
+    // Browser does not support persistence
+    console.warn('Firestore persistence not supported in this browser.');
+  } else {
+    console.error('Firestore persistence error:', err);
+  }
+});
 
 // Global error handler to suppress harmless browser extension errors
 window.addEventListener('error', (event) => {

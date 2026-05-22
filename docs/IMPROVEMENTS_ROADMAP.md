@@ -1,6 +1,11 @@
-# 🚀 Pharmacy Logistics System - Improvement Roadmap
+# 🚀 Pharmacy Logistics System — Full Improvement Plan & Roadmap
 
-This document outlines potential improvements organized by priority and impact. Items marked with ✅ have been completed.
+> **Version:** 3.0 — Updated with complete improvement analysis  
+> **Last Updated:** 2024  
+> **Status:** MVP complete + Enhancement Phase active
+
+This document is the single source of truth for planned, in-progress, and completed improvements.
+Items marked ✅ are shipped; 🔄 are in progress; ⏳ are planned.
 
 ---
 
@@ -14,7 +19,8 @@ This document outlines potential improvements organized by priority and impact. 
 - ✅ Sync changes when connection is restored
 - ✅ Offline queue for failed operations
 - ✅ Conflict resolution for simultaneous edits
-- **Files:** `frontend/sw.js`, `frontend/js/offline.js`, `frontend/js/indexeddb.js`, `frontend/manifest.json`
+- ✅ **Firestore offline persistence enabled** (`synchronizeTabs: true`)
+- **Files:** `frontend/sw.js`, `frontend/js/offline.js`, `frontend/js/indexeddb.js`, `frontend/manifest.json`, `frontend/js/config.js`
 
 ### 2. **Export & Reporting** ✅
 **Status:** Complete | **Priority:** High | **Impact:** Medium
@@ -499,3 +505,354 @@ When prioritizing improvements, consider:
 - Document all changes
 - Consider scalability for future growth
 - Focus on features that provide the most value to clinic operations
+
+---
+
+---
+
+# 📋 FULL IMPROVEMENT PLAN (v3.0)
+
+> Generated from a comprehensive analysis of the codebase, real-world clinic workflow requirements, security best practices, and DevOps standards.
+
+---
+
+## 1. Product Improvements
+
+### ✅ Dispensing Workflow — **SHIPPED**
+**Why:** Every pharmacy must track what goes *out* per patient, not just what comes in.  
+**Benefit:** Accountability, audit trail, prevents accidental over-dispense, links to patient records.  
+**Effort:** Medium | **Priority:** Critical  
+**Files added:** `frontend/dispense.html`, `frontend/js/dispense.js`
+
+### ✅ Supplier Management — **SHIPPED**
+**Why:** Without supplier records, reordering is done informally with no audit trail.  
+**Benefit:** Centralized contact info, purchase history, faster reordering.  
+**Effort:** Medium | **Priority:** High  
+**Files added:** `frontend/suppliers.html`, `frontend/js/suppliers.js`
+
+### ⏳ Purchase Order / Reorder Workflow
+**Why:** Low-stock alerts currently require manual action. Streamline to "approve order" click.  
+**Benefit:** Faster reordering, supplier integration, reduced stockouts.  
+**Effort:** High | **Priority:** High
+
+### ⏳ FIFO Batch Management
+**Why:** Dispensing the oldest stock first reduces expiry waste.  
+**Benefit:** Fewer expired medicines, cost savings, compliance.  
+**Effort:** Medium | **Priority:** Medium
+
+### ⏳ Patient Prescription History
+**Why:** Recurring patients often receive the same medicines. Linking dispense records to patients enables dosage history.  
+**Benefit:** Clinician safety check, avoids double-dispensing, supports patient care.  
+**Effort:** High | **Priority:** Medium
+
+### ⏳ Medicine Price / Cost Tracking
+**Why:** Clinic management needs to track procurement costs and stock value.  
+**Benefit:** Financial oversight, budget planning, wastage cost quantification.  
+**Effort:** Medium | **Priority:** Medium
+
+---
+
+## 2. UI/UX Improvements
+
+### ✅ Loading Skeletons — **SHIPPED**
+**Why:** Blank pages during data load cause uncertainty for low-literacy users.  
+**Files:** `frontend/css/styles.css`
+
+### ✅ Accessibility: Focus Ring & Skip Link — **SHIPPED**
+**Why:** Keyboard and assistive technology users need visible focus and navigation shortcuts.  
+**Files:** `frontend/css/styles.css`, new pages
+
+### ✅ `--info-color` CSS variable — **SHIPPED**
+**Why:** The `var(--info-color)` was referenced in dashboard HTML but not defined, causing incorrect styling.
+
+### ⏳ Dark Mode
+**Effort:** Low | **Priority:** Low  
+Add `prefers-color-scheme: dark` media query overrides.
+
+### ⏳ Guided Onboarding (first-run tour)
+**Effort:** Medium | **Priority:** Low  
+Step-by-step tooltip tour using Shepherd.js or a lightweight inline solution.
+
+### ⏳ Better Mobile Navigation
+**Effort:** Low | **Priority:** Medium  
+Add a bottom navigation bar or hamburger menu for small screens.
+
+---
+
+## 3. Technical Improvements
+
+### ✅ Input Validation & Sanitization Utility — **SHIPPED**
+**Why:** Inconsistent validation across forms leads to dirty data and potential XSS.  
+**Benefit:** Consistent, reusable validators; HTML sanitization before Firestore writes.  
+**Files:** `frontend/js/validation.js`
+
+### ✅ Firestore Offline Persistence Enabled — **SHIPPED (BUG FIX)**
+**Why:** `db.enablePersistence()` was commented out, meaning the app lost all local data on page reload while offline.  
+**Benefit:** True offline support — inventory loads from local cache even with no network.  
+**Files:** `frontend/js/config.js`
+
+### ⏳ Modular JavaScript (ES Modules)
+**Effort:** High | **Priority:** Low  
+Refactor from global functions to ES modules with `import`/`export`. Requires a build step (Vite or Parcel).
+
+### ⏳ Error Monitoring (Sentry)
+**Effort:** Low | **Priority:** High  
+One-line Sentry integration catches JS errors from real clinic users in production.
+
+### ⏳ Content Security Policy Header
+**Effort:** Low | **Priority:** High  
+Add CSP meta tag or Firebase Hosting header to prevent XSS from third-party scripts.
+
+---
+
+## 4. Data & Inventory Logic Improvements
+
+### ✅ Dispense Records Collection — **SHIPPED**
+Each dispense creates a document in `dispenseRecords` with patient ID, quantity, and prescriber.
+
+### ✅ Suppliers Collection — **SHIPPED**
+Suppliers stored in Firestore with contact info, notes, and audit fields.
+
+### ⏳ Batch-Level Expiry Tracking Improvements
+**Effort:** Medium | **Priority:** Medium  
+When multiple batches of the same medicine exist, track expiry per batch and alert on the earliest-expiring batch.
+
+### ⏳ Reorder Point Forecasting
+**Effort:** Medium | **Priority:** Medium  
+Based on the last 30-day consumption rate, calculate when stock will run out and suggest reorder date.
+
+### ⏳ Wastage Tracking
+**Effort:** Low | **Priority:** Medium  
+Add a "Dispose / Write Off" transaction type that records quantity discarded (expired, damaged) separately from normal stock removal.
+
+---
+
+## 5. Security Improvements
+
+### ✅ Firestore Rules: Dispense Records — **SHIPPED**
+Strict create rules: `dispensedBy == request.auth.uid`, `quantityDispensed > 0`.
+
+### ✅ Firestore Rules: Suppliers Collection — **SHIPPED**
+Staff and admin can manage suppliers; only admin can delete.
+
+### ⏳ Content Security Policy
+**Effort:** Low | **Priority:** High  
+Prevent XSS by restricting script sources in Firebase Hosting config.
+
+### ⏳ Two-Factor Authentication
+**Effort:** Medium | **Priority:** Medium  
+Use Firebase Auth TOTP or phone second factor for admin accounts.
+
+### ⏳ Rate Limiting via Firebase App Check
+**Effort:** Low | **Priority:** High  
+Enable Firebase App Check to prevent API abuse from non-browser clients.
+
+### ⏳ Audit Log Viewer (Admin UI)
+**Effort:** Medium | **Priority:** Medium  
+Admin-only page listing all writes to sensitive collections (medicines, users, dispenseRecords).
+
+---
+
+## 6. Testing & QA
+
+### ⏳ Unit Tests for Validation Utilities
+**Effort:** Low | **Priority:** High  
+Test `validateQuantity`, `validateExpiryDate`, `validateDispenseQuantity`, `sanitizeText` with Jest or Vitest.
+
+### ⏳ Integration Tests for Inventory Logic
+**Effort:** Medium | **Priority:** Medium  
+Test `addMedicine`, `adjustStock`, `dispense` against a Firestore emulator.
+
+### ⏳ E2E Tests (Playwright)
+**Effort:** High | **Priority:** Low  
+Automate: login → add stock → dispense → verify transaction in history.
+
+### Manual QA Checklist (immediate)
+- [ ] Dispense: block if quantity > available stock
+- [ ] Dispense: block if medicine is expired
+- [ ] Supplier save with empty name → validation error
+- [ ] Analytics: switching tabs loads correct data
+- [ ] Offline: queue operations, sync on reconnect
+
+---
+
+## 7. DevOps & Project Structure
+
+### ✅ GitHub Actions CI Workflow — **SHIPPED**
+**Files:** `.github/workflows/ci.yml`  
+- HTML validation (html-validate)
+- JavaScript lint (ESLint)
+- Secret scanning (trufflehog)
+- Required file existence check
+
+### ✅ GitHub Issue Templates — **SHIPPED**
+**Files:** `.github/ISSUE_TEMPLATE/bug_report.yml`, `feature_request.yml`, `security_issue.yml`
+
+### ✅ CONTRIBUTING.md — **SHIPPED**
+Branching strategy, code style guide, manual QA checklist, security policy.
+
+### ⏳ Semantic Versioning & Changelog
+**Effort:** Low | **Priority:** Medium  
+Use `CHANGELOG.md` following Keep a Changelog format. Bump `README.md` version on each release.
+
+### ⏳ Firebase Hosting Deploy Workflow
+**Effort:** Low | **Priority:** High  
+GitHub Action to auto-deploy to Firebase Hosting on push to `main`, using a service account secret.
+
+---
+
+## 8. Reporting & Analytics
+
+### ✅ Analytics & Reports Page — **SHIPPED**
+**Files:** `frontend/analytics.html`, `frontend/js/analytics.js`  
+- KPI summary cards (total, expiring, low stock, dispensed 30d)
+- Expiring soon table (sortable, exportable)
+- Low stock / out-of-stock table
+- 30-day consumption by medicine
+- Dispense log view with export
+
+### ⏳ Monthly Summary Report (PDF)
+**Effort:** Medium | **Priority:** Medium  
+Printable monthly summary: medicines added, dispensed, expired, wastage, top 10 fast-movers.
+
+### ⏳ Reorder Forecast Report
+**Effort:** Medium | **Priority:** High  
+Based on average daily consumption, project when each medicine will run out.
+
+### ⏳ Wastage Report
+**Effort:** Low | **Priority:** Medium  
+Show medicines written off as expired or damaged, with cost impact.
+
+---
+
+## 9. Compliance & Real-World Readiness
+
+### ✅ Firestore Persistence (Offline Resilience) — **SHIPPED**
+App now caches data locally so the dashboard loads even without internet.
+
+### ⏳ Data Backup Script
+**Effort:** Low | **Priority:** High  
+A simple Cloud Function or GitHub Action that exports Firestore collections to Cloud Storage monthly.
+
+### ⏳ Print-Friendly Dispense Record
+**Effort:** Low | **Priority:** Medium  
+Allow printing a single dispense record as a patient receipt.
+
+### ⏳ Low-Bandwidth Mode
+**Effort:** Medium | **Priority:** Medium  
+Option to disable real-time listeners and use manual refresh, reducing data usage.
+
+---
+
+## 10. Prioritized Roadmap
+
+### 🟥 Quick Wins (≤1 day each)
+
+| Improvement | Why | Benefit | Effort | Priority |
+|-------------|-----|---------|--------|----------|
+| ✅ Enable Firestore persistence | App loses data offline | True offline support | Low | **Critical** |
+| ✅ Input validation utility | Dirty data / XSS risk | Consistent, safe inputs | Low | **Critical** |
+| ✅ Dispensing workflow | Missing pharmacy core feature | Patient audit trail | Medium | **Critical** |
+| ✅ Supplier management | No procurement tracking | Centralized suppliers | Medium | **High** |
+| ✅ Analytics page | No consolidated reports | Data-driven management | Medium | **High** |
+| ✅ GitHub Actions CI | No automated checks | Catch regressions early | Low | **High** |
+| ✅ Issue templates | Inconsistent bug reports | Better issue quality | Low | **Medium** |
+| ✅ CONTRIBUTING.md | No contribution guide | Onboard contributors | Low | **Medium** |
+| Error monitoring (Sentry) | Silent production errors | Proactive bug detection | Low | **High** |
+| Content Security Policy | XSS risk from third-party scripts | Hardens app security | Low | **High** |
+| Firebase App Check | API abuse risk | Rate limiting & protection | Low | **High** |
+
+### 🟨 High-Impact, Medium-Effort (1–5 days each)
+
+| Improvement | Why | Benefit | Effort | Priority |
+|-------------|-----|---------|--------|----------|
+| Firebase Hosting deploy CI/CD | Manual deployments | Automated, reliable deploys | Low | **High** |
+| Reorder forecast report | Reactive, not proactive restocking | Prevent stockouts | Medium | **High** |
+| Wastage tracking | No visibility on expired/damaged write-offs | Cost accountability | Medium | **Medium** |
+| Purchase order workflow | Manual reordering | Streamlined procurement | High | **High** |
+| Audit log viewer UI | No admin review of sensitive changes | Accountability | Medium | **Medium** |
+| Unit tests for validation.js | No automated tests | Catch regressions | Low | **High** |
+| Monthly summary PDF | No printable summary | Management reporting | Medium | **Medium** |
+| FIFO batch dispensing | No FEFO enforcement | Reduce expiry waste | Medium | **Medium** |
+
+### 🟩 Long-Term Advanced Features (1–4 weeks each)
+
+| Improvement | Why | Benefit | Effort | Priority |
+|-------------|-----|---------|--------|----------|
+| Patient prescription history | No cross-visit dispensing history | Clinical safety | High | **Medium** |
+| Two-factor authentication | Single-factor auth for clinic data | Security hardening | Medium | **Medium** |
+| SMS notifications | Email not reliable in low-resource settings | Proactive alerts | Medium | **Medium** |
+| Multi-location support | Scales to clinic network | Future scalability | High | **Low** |
+| Automated reordering | Manual process slow | Operational efficiency | High | **Medium** |
+| E2E tests (Playwright) | No regression safety net | Quality confidence | High | **Low** |
+| ES module refactor | Global function namespace | Maintainability | High | **Low** |
+| Native mobile app | Better mobile UX | Staff convenience | High | **Low** |
+
+---
+
+## 11. GitHub Issue Ideas (20)
+
+| # | Title | Description | Priority | Effort |
+|---|-------|-------------|----------|--------|
+| 1 | Enable Firestore offline persistence | `db.enablePersistence()` was commented out — app lost data on offline reload | Critical | Low |
+| 2 | Add input validation utility (validation.js) | Centralized sanitization and validation helpers for all forms | Critical | Low |
+| 3 | Add dispensing workflow page | Record medicine dispensed to patients; deduct stock; full audit trail | Critical | Medium |
+| 4 | Add supplier management page | CRUD for suppliers: name, contact, phone, email, notes | High | Medium |
+| 5 | Add analytics & reports page | Expiring soon, low stock, consumption, dispense log — all in one place | High | Medium |
+| 6 | Add GitHub Actions CI workflow | Lint HTML/JS, secret scan, file structure validation on every PR | High | Low |
+| 7 | Add GitHub issue templates | Bug, feature, security templates for structured issue filing | Medium | Low |
+| 8 | Add CONTRIBUTING.md | Branching strategy, code style, security policy for contributors | Medium | Low |
+| 9 | Add Firebase App Check | Prevent API abuse; enable in Firebase Console + configure in config.js | High | Low |
+| 10 | Add Content Security Policy | Add CSP header in firebase.json to prevent XSS from third-party scripts | High | Low |
+| 11 | Implement error monitoring (Sentry) | Catch production JS errors before clinic staff report them | High | Low |
+| 12 | Add reorder forecast report | Project when stock runs out based on 30-day consumption average | High | Medium |
+| 13 | Add wastage / write-off transaction type | Track medicines disposed as expired or damaged, separate from normal removal | Medium | Low |
+| 14 | Add unit tests for validation.js | Jest/Vitest tests for all validation helpers | High | Low |
+| 15 | Add Firebase Hosting auto-deploy CI/CD | GitHub Action to deploy to Firebase Hosting on push to main | High | Low |
+| 16 | Add monthly summary report (printable) | Admin prints a monthly summary: stock added, dispensed, expired, wastage | Medium | Medium |
+| 17 | Add FIFO/FEFO batch dispensing guidance | When dispensing, suggest the batch expiring soonest first | Medium | Medium |
+| 18 | Add purchase order / reorder workflow | Staff can submit a reorder request linked to a supplier | High | High |
+| 19 | Add audit log viewer (admin only) | Admin page listing all writes to medicines, dispenseRecords, users | Medium | Medium |
+| 20 | Add low-bandwidth mode | Disable real-time listeners; use manual refresh button to save data | Medium | Medium |
+
+---
+
+## 12. Best Next 5 Actions
+
+> The five most important things to do **right now** to improve safety, reliability, and clinical value.
+
+### ✅ 1. Enable Firestore Offline Persistence — **DONE**
+The app was silently failing offline because `db.enablePersistence()` was commented out. This is a critical reliability fix for a clinic that may have intermittent internet.
+
+### ✅ 2. Add Dispensing Workflow — **DONE**
+A pharmacy without a dispense record is incomplete. This links stock deductions to patients, creating an audit trail that is essential for healthcare accountability.
+
+### 3. Add Error Monitoring (Sentry) — **NEXT**
+Install Sentry with one `<script>` tag in each HTML page. This will immediately surface real errors that clinic staff encounter silently — enabling proactive fixes before they impact operations.
+
+```html
+<!-- Add to <head> of all HTML pages -->
+<script
+  src="https://browser.sentry-cdn.com/7.x.x/bundle.min.js"
+  crossorigin="anonymous"
+></script>
+<script>
+  Sentry.init({ dsn: "YOUR_SENTRY_DSN", environment: "production" });
+</script>
+```
+
+### 4. Deploy Firebase App Check — **NEXT**
+Enable App Check in the Firebase Console (reCAPTCHA v3 for web). This prevents unauthorized API calls to your Firestore database. One-time setup, significant security improvement.
+
+### 5. Add Automated Tests for validation.js — **NEXT**
+Install `vitest` (`npm install -D vitest`) and write 10–15 unit tests covering the validators and sanitizers. This creates a regression safety net for future changes and documents expected behavior.
+
+```bash
+npm install -D vitest
+# Create frontend/js/__tests__/validation.test.js
+```
+
+---
+
+*This roadmap is a living document. Update it as features are completed or priorities change.*  
+*Always involve clinic staff in feature prioritization — their workflow knowledge is invaluable.*

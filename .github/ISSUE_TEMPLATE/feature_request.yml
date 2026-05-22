@@ -1,0 +1,62 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement for the Pharmacy Logistics System
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe your idea in detail.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the app
+      options:
+        - Dashboard / Inventory
+        - Dispensing
+        - Suppliers
+        - Alerts / Notifications
+        - Analytics / Reports
+        - Security / Roles
+        - Offline Support
+        - UI / UX
+        - DevOps / CI/CD
+        - Documentation
+        - New Feature (other)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or gap this solves
+      placeholder: Describe the current limitation or workflow pain point...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      placeholder: Describe the feature or change you'd like to see...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your estimate)
+      options:
+        - Critical — blocks clinic operation
+        - High — significant daily impact
+        - Medium — useful improvement
+        - Low — nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Have you tried any workarounds? Are there other ways to solve this?

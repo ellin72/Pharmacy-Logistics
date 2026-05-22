@@ -1,0 +1,67 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behaviour in the Pharmacy Logistics System
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible so we can reproduce and fix it quickly.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the app
+      options:
+        - Dashboard / Inventory
+        - Add Stock
+        - Dispense
+        - Suppliers
+        - Alerts / Notifications
+        - Transaction History
+        - Emergency Orders
+        - Analytics / Reports
+        - Barcode Scanner
+        - Bulk Operations
+        - Authentication / Login
+        - Offline / Sync
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe the bug clearly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: What did you expect to happen?
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & version
+      placeholder: e.g., Chrome 124, Firefox 125
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or error messages
+      placeholder: Paste any error messages or attach screenshots here.

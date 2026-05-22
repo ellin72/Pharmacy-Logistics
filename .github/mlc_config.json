@@ -1,0 +1,15 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://console.firebase.google.com"
+    },
+    {
+      "pattern": "^https://github.com/ellin72/Pharmacy-Logistics/discussions"
+    }
+  ],
+  "replacementPatterns": [],
+  "retryOn429": true,
+  "retryCount": 3,
+  "fallbackRetryDelay": "30s",
+  "aliveStatusCodes": [200, 206]
+}

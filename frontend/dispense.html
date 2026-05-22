@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispense Medicine — Ehafo Clinic Pharmacy</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <a href="dashboard.html" class="btn btn-secondary btn-sm">← Dashboard</a>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="main-content">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">💊 Dispense Medicine</h1>
+      <p style="color:var(--text-secondary);margin-top:0.25rem;">
+        Record medicine dispensed to a patient. Stock is automatically deducted and logged.
+      </p>
+    </div>
+
+    <!-- Dispense Form -->
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-header">
+        <h2 class="card-title">New Dispense Record</h2>
+      </div>
+
+      <form id="dispenseForm" novalidate>
+        <!-- Medicine selector -->
+        <div class="form-group">
+          <label for="medicineName" class="form-label">Medicine Name <span aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="medicineName"
+            class="form-input"
+            required
+            list="medicineList"
+            placeholder="Type to search medicines…"
+            autocomplete="off"
+            aria-required="true"
+            aria-describedby="medicineNameError"
+          />
+          <datalist id="medicineList"></datalist>
+          <div class="form-error hidden" id="medicineNameError" role="alert"></div>
+        </div>
+
+        <!-- Hidden medicine ID filled when item selected from datalist -->
+        <input type="hidden" id="selectedMedicineId" />
+        <input type="hidden" id="selectedMedicineQty" value="0" />
+
+        <!-- Stock info panel (shown after medicine selected) -->
+        <div id="stockInfo" style="display:none;margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:0.5rem;">
+          <span id="stockInfoText" style="font-size:0.9rem;color:var(--text-secondary);"></span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label for="dispenseQuantity" class="form-label">Quantity to Dispense <span aria-hidden="true">*</span></label>
+            <input
+              type="number"
+              id="dispenseQuantity"
+              class="form-input"
+              required
+              min="1"
+              step="1"
+              placeholder="0"
+              aria-required="true"
+              aria-describedby="dispenseQuantityError"
+            />
+            <div class="form-error hidden" id="dispenseQuantityError" role="alert"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="patientId" class="form-label">Patient ID / Reference <span aria-hidden="true">*</span></label>
+            <input
+              type="text"
+              id="patientId"
+              class="form-input"
+              required
+              placeholder="e.g., PAT-00123"
+              aria-required="true"
+              aria-describedby="patientIdError"
+            />
+            <div class="form-error hidden" id="patientIdError" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prescribedBy" class="form-label">Prescribed By (optional)</label>
+          <input
+            type="text"
+            id="prescribedBy"
+            class="form-input"
+            placeholder="Doctor or clinician name"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="dispenseNotes" class="form-label">Notes (optional)</label>
+          <textarea
+            id="dispenseNotes"
+            class="form-input"
+            rows="2"
+            placeholder="Dosage instructions, special notes…"
+            style="resize:vertical;"
+          ></textarea>
+        </div>
+
+        <div id="formMessage" class="hidden" style="margin-bottom:1rem;padding:0.75rem 1rem;border-radius:0.5rem;font-weight:500;"></div>
+
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary" id="dispenseBtn">
+            💊 Dispense Medicine
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="resetDispenseForm()">
+            Clear Form
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Recent Dispense History -->
+    <div class="card">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        <h2 class="card-title" style="margin:0;">Recent Dispense Records</h2>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <input
+            type="text"
+            id="historySearch"
+            class="form-input"
+            placeholder="Search by medicine or patient…"
+            style="width:220px;padding:0.375rem 0.75rem;font-size:0.875rem;"
+            oninput="filterDispenseHistory()"
+            aria-label="Search dispense history"
+          />
+          <button onclick="exportDispenseHistory()" class="btn btn-secondary btn-sm">📥 Export CSV</button>
+        </div>
+      </div>
+
+      <div id="historyLoading" style="padding:2rem;text-align:center;color:var(--text-secondary);">
+        <div class="skeleton skeleton-text wide" style="margin:0 auto;"></div>
+      </div>
+
+      <div id="historyEmpty" class="hidden" style="padding:2rem;text-align:center;color:var(--text-secondary);">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">📋</div>
+        <p>No dispense records yet. Records will appear here after dispensing.</p>
+      </div>
+
+      <div id="historyTable" class="hidden">
+        <div style="overflow-x:auto;">
+          <table class="table" aria-label="Dispense history">
+            <thead>
+              <tr>
+                <th scope="col">Date &amp; Time</th>
+                <th scope="col">Medicine</th>
+                <th scope="col">Batch</th>
+                <th scope="col">Qty</th>
+                <th scope="col">Patient ID</th>
+                <th scope="col">Prescribed By</th>
+                <th scope="col">Dispensed By</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+        <div id="historyPagination" style="display:flex;gap:0.5rem;padding:0.75rem 0;justify-content:center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/dispense.js"></script>
+</body>
+</html>

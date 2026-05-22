@@ -162,6 +162,37 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
+
+    // ==========================================
+    // DISPENSE RECORDS COLLECTION
+    // ==========================================
+    // Staff & Admin: Read all, Create
+    // Admin Only: Update, Delete
+    match /dispenseRecords/{recordId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                     request.resource.data.keys().hasAll(['medicineId', 'medicineName', 'quantityDispensed', 'patientId', 'dispensedBy', 'timestamp']) &&
+                     request.resource.data.dispensedBy == request.auth.uid &&
+                     request.resource.data.quantityDispensed is int &&
+                     request.resource.data.quantityDispensed > 0;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // SUPPLIERS COLLECTION
+    // ==========================================
+    // Staff & Admin: Read all, Create & Update
+    // Admin Only: Delete
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                     request.resource.data.keys().hasAny(['name']) &&
+                     request.resource.data.name is string &&
+                     request.resource.data.name.size() > 0;
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
   }
 }
 

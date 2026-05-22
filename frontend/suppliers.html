@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suppliers — Ehafo Clinic Pharmacy</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">🏥 Ehafo Clinic Pharmacy</div>
+      <div class="user-menu">
+        <span class="user-info" id="userEmail"></span>
+        <a href="dashboard.html" class="btn btn-secondary btn-sm">← Dashboard</a>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="main-content">
+    <div class="dashboard-header">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <h1 class="dashboard-title" style="margin:0;">🏭 Supplier Management</h1>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openSupplierModal()">+ Add Supplier</button>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="card" style="margin-bottom:1rem;padding:1rem;">
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+        <input
+          type="text"
+          id="supplierSearch"
+          class="form-input"
+          placeholder="Search suppliers by name or contact…"
+          style="flex:1;min-width:200px;"
+          oninput="filterSuppliers()"
+          aria-label="Search suppliers"
+        />
+        <span id="supplierCount" style="color:var(--text-secondary);font-size:0.875rem;white-space:nowrap;"></span>
+      </div>
+    </div>
+
+    <!-- Supplier list -->
+    <div class="card">
+      <div id="suppliersLoading" style="padding:2rem;text-align:center;">
+        <div class="skeleton skeleton-text wide" style="margin:0.5rem auto;"></div>
+        <div class="skeleton skeleton-text short" style="margin:0.5rem auto;"></div>
+        <div class="skeleton skeleton-text wide" style="margin:0.5rem auto;"></div>
+      </div>
+      <div id="suppliersEmpty" class="hidden" style="padding:3rem;text-align:center;color:var(--text-secondary);">
+        <div style="font-size:3rem;margin-bottom:0.75rem;">🏭</div>
+        <p style="font-weight:600;margin-bottom:0.25rem;">No suppliers yet</p>
+        <p>Click <strong>+ Add Supplier</strong> to add your first supplier.</p>
+      </div>
+      <div id="suppliersTable" class="hidden" style="overflow-x:auto;">
+        <table class="table" aria-label="Supplier list">
+          <thead>
+            <tr>
+              <th scope="col">Supplier Name</th>
+              <th scope="col">Contact Person</th>
+              <th scope="col">Phone</th>
+              <th scope="col">Email</th>
+              <th scope="col">Address</th>
+              <th scope="col">Notes</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="suppliersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Supplier Modal -->
+  <div class="modal-overlay hidden" id="supplierModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Add Supplier</h3>
+        <button class="modal-close" onclick="closeSupplierModal()" aria-label="Close modal">×</button>
+      </div>
+      <form id="supplierForm" novalidate>
+        <input type="hidden" id="editSupplierId" />
+
+        <div class="form-group">
+          <label for="supplierName" class="form-label">Supplier Name <span aria-hidden="true">*</span></label>
+          <input type="text" id="supplierName" class="form-input" required placeholder="e.g., MedSupply Ltd" aria-required="true" />
+          <div class="form-error hidden" id="supplierNameError" role="alert"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label for="contactPerson" class="form-label">Contact Person</label>
+            <input type="text" id="contactPerson" class="form-input" placeholder="Full name" />
+          </div>
+          <div class="form-group">
+            <label for="supplierPhone" class="form-label">Phone</label>
+            <input type="tel" id="supplierPhone" class="form-input" placeholder="+255 700 000 000" />
+            <div class="form-error hidden" id="supplierPhoneError" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="supplierEmail" class="form-label">Email</label>
+          <input type="email" id="supplierEmail" class="form-input" placeholder="orders@supplier.com" />
+          <div class="form-error hidden" id="supplierEmailError" role="alert"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="supplierAddress" class="form-label">Address</label>
+          <input type="text" id="supplierAddress" class="form-input" placeholder="Street, City, Country" />
+        </div>
+
+        <div class="form-group">
+          <label for="supplierNotes" class="form-label">Notes</label>
+          <textarea id="supplierNotes" class="form-input" rows="2" placeholder="Lead time, payment terms, etc." style="resize:vertical;"></textarea>
+        </div>
+
+        <div id="supplierFormMsg" class="hidden" style="margin-bottom:1rem;padding:0.75rem;border-radius:0.5rem;font-size:0.875rem;"></div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeSupplierModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveSupplierBtn">Save Supplier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="deleteModalTitle">Delete Supplier</h3>
+        <button class="modal-close" onclick="closeDeleteModal()" aria-label="Close">×</button>
+      </div>
+      <p style="margin-bottom:1.5rem;">Are you sure you want to delete <strong id="deleteSupplierName"></strong>? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteSupplier()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/suppliers.js"></script>
+</body>
+</html>

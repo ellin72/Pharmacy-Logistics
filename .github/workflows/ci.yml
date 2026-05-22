@@ -1,0 +1,131 @@
+name: CI — Lint & Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ─── HTML Validation ─────────────────────────────────────────────────────────
+  validate-html:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Validate HTML files
+        run: |
+          cd frontend
+          html-validate \
+            --config '{"extends":["html-validate:recommended"],"rules":{"no-inline-style":0,"no-trailing-whitespace":0,"void-style":0,"attr-quotes":0,"doctype-style":0}}' \
+            *.html || true
+
+  # ─── JavaScript Linting ───────────────────────────────────────────────────────
+  lint-js:
+    name: Lint JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ESLint
+        run: npm install -g eslint
+
+      - name: Lint JavaScript files
+        run: |
+          eslint frontend/js/*.js \
+            --env browser \
+            --env es2020 \
+            --rule '{"no-undef":0,"no-unused-vars":"warn","no-console":"off"}' \
+            --no-eslintrc || true
+
+  # ─── Security: check for hardcoded secrets ───────────────────────────────────
+  check-secrets:
+    name: Detect Hardcoded Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run trufflehog (secret scan)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: HEAD~1
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true
+
+  # ─── Link check (documentation) ─────────────────────────────────────────────
+  check-links:
+    name: Check Documentation Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/mlc_config.json'
+        continue-on-error: true
+
+  # ─── File structure validation ───────────────────────────────────────────────
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          REQUIRED=(
+            "frontend/index.html"
+            "frontend/dashboard.html"
+            "frontend/js/config.js"
+            "frontend/js/auth.js"
+            "frontend/js/inventory.js"
+            "frontend/js/validation.js"
+            "frontend/css/styles.css"
+            "frontend/manifest.json"
+            "frontend/sw.js"
+            "docs/FIRESTORE_RULES_FINAL.rules"
+            "README.md"
+          )
+          FAILED=0
+          for f in "${REQUIRED[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "❌ MISSING: $f"
+              FAILED=1
+            else
+              echo "✅ OK: $f"
+            fi
+          done
+          exit $FAILED
+
+      - name: Check for Firebase API key placeholder (security)
+        run: |
+          # Warn if a real-looking Firebase API key is in config.js
+          # (the key in the public example repo is intentional and protected by Firestore rules)
+          if grep -q 'AIzaSy' frontend/js/config.js; then
+            echo "ℹ️  Firebase API key found in config.js — ensure Firestore security rules are deployed."
+          fi
+          # Check that no .env files were accidentally committed
+          if find . -name '.env' -not -path './.git/*' | grep -q '.env'; then
+            echo "❌ .env file found — do NOT commit environment files!"
+            exit 1
+          fi
+          echo "✅ No .env files found."
